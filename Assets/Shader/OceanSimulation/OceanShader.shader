@@ -2,11 +2,12 @@ Shader "ReV3nus/OceanShader"
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
+        //_MainTex ("Texture", 2D) = "white" {}
+        _MainColor ("Color", Color) = (1,1,1,1)
         _Metallicness("Metallicness",Range(0,1)) = 0
         _Glossiness("Smoothness",Range(0,1)) = 1
         
-        _Amplitude("Amplitude", float) = 1
+        //_Amplitude("Amplitude", float) = 1
     }
     SubShader
     {
@@ -28,6 +29,7 @@ Shader "ReV3nus/OceanShader"
             struct VertexData {
                 float4 position : POSITION;
                 float4 uv : TEXCOORD0;
+                float3 normal : NORMAL;
             };
 
             struct FragmentData {
@@ -38,13 +40,14 @@ Shader "ReV3nus/OceanShader"
             };
 
             
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
+            // sampler2D _MainTex;
+            // float4 _MainTex_ST;
+            float4 _MainColor;
             sampler2D _NormalMap;
             float4 _NormalMap_ST;
             float _Glossiness;
             float _Metallicness;
-            float _Amplitude;
+            //float _Amplitude;
 
 
             float Pow2(float x)
@@ -74,17 +77,11 @@ Shader "ReV3nus/OceanShader"
 
             FragmentData vert (VertexData v)
             {
-
                 FragmentData o;
                 o.position = UnityObjectToClipPos(v.position);
                 o.worldPos = mul(unity_ObjectToWorld, v.position).xyz;
-
-                o.normal = float3(0, 1, 0);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-
-                float WaveFix = sin(v.position.x) * _Amplitude;
-                o.position.y += WaveFix;
-
+                o.normal = UnityObjectToWorldNormal(v.normal);
+                o.uv=v.uv;//o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 return o;
             }
 
@@ -123,7 +120,8 @@ Shader "ReV3nus/OceanShader"
 
             fixed4 frag (FragmentData i) : SV_Target
             {
-                float4 mainTex = tex2D( _MainTex, i.uv );
+                //float4 mainTex = tex2D( _MainTex, i.uv );
+                float4 mainTex = _MainColor;
 
                 //// Vectors
                 float3 L = normalize(lerp(_WorldSpaceLightPos0.xyz, _WorldSpaceLightPos0.xyz - i.worldPos.xyz,_WorldSpaceLightPos0.w));

@@ -1,0 +1,48 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+#define THREAD_X 8
+#define THREAD_Y 8
+
+RWStructuredBuffer<float3> positions;
+RWStructuredBuffer<float3> normals;
+
+cbuffer TimeBuffer
+{
+    float _Time;
+}
+
+uint3 size;
+float _Amplitude;
+float3 _WindVelocity;
+int _Octaves;
+
+[numthreads(THREAD_X, THREAD_Y, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    int index = id.y * size.x + id.x;
+    float2 pos = positions[index].xz;
+    
+    float totalWaves = 0;
+    float maxHeight = 0;
+    float seed = 0;
+    float frequency = 5;
+    float amplitude = 1;
+    float speed = 1;
+    float calcNormal = 0;
+    for (int i = 0; i < _Octaves; i++)
+    {
+        float2 dir = float2(sin(seed), cos(seed));
+        float curWave = amplitude * sin(dot(dir, pos) * frequency + _Time * speed);
+        totalWaves += curWave;
+        maxHeight += amplitude;
+        frequency *= 0.82;
+        amplitude *= 1.18;
+        seed += 114.514;
+    }
+    
+    totalWaves *= _Amplitude / maxHeight;
+    positions[index].y = totalWaves;
+    
+    
+}

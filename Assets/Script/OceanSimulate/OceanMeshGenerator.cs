@@ -1,14 +1,14 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(OceanPlaneGenerator))]
-public class OceanPlaneGeneratorEditor : Editor
+[CustomEditor(typeof(OceanMeshGenerator))]
+public class OceanMeshGeneratorEditor : Editor
 {
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
 
-        OceanPlaneGenerator generator = (OceanPlaneGenerator)target;
+        OceanMeshGenerator generator = (OceanMeshGenerator)target;
         if (GUILayout.Button("Generate Plane"))
         {
             generator.GeneratePlane();
@@ -16,18 +16,13 @@ public class OceanPlaneGeneratorEditor : Editor
     }
 }
 
-public class OceanPlaneGenerator : MonoBehaviour
+public class OceanMeshGenerator : MonoBehaviour
 {
     //public int widthSegments = 2;
     //public int lengthSegments = 2;
     public float Width = 1.0f;
     public float Length = 1.0f;
     public float VertexDistance = 0.2f;
-
-    void OnDrawGizmos()
-    {
-        //GeneratePlane();
-    }
 
     public void GeneratePlane()
     {
