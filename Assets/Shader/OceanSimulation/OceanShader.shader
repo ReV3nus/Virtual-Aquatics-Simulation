@@ -181,6 +181,7 @@ Shader "ReV3nus/OceanShader"
                 float4 color = float4(directLight * _LightColor0.rgb + indirectLight,1);
                 color += float4( UNITY_LIGHTMODEL_AMBIENT.xyz * albedo,1);
 
+                //return float4(N.x/2.0+0.5,0,N.z/2.0+0.5,1);
                 return color;
             }
             ENDCG
