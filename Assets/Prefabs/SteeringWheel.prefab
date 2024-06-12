@@ -113,7 +113,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b29d4594147f4a279ed3d3679d6dc2c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  handGrabInteractable: {fileID: 0}
+  handGrabInteractable: {fileID: 5424081396617240012}
+  useDebug: 0
+  debugAngle: 0
   debugPoint: {fileID: 0}
 --- !u!1 &6713462675822704239
 GameObject:
@@ -495,7 +497,7 @@ MeshCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0

@@ -5,19 +5,21 @@ using Oculus.Interaction.HandGrab;
 
 namespace Interaction
 {
-    public class SteeringWheelGrab : MonoBehaviour
+    public class SteeringWheelController : MonoBehaviour
     {
         public HandGrabInteractable handGrabInteractable;
 
-        public float angle { get; private set; }
+        public float angle { get; private set; } // rad
         public float lastFrameAngle { get; private set; }
         private bool _isOn;
         private float _timeStep;
         private float _lastGrabAngle;
         private HandGrabInteractor _lastHand;
 
+        public bool useDebug;
+        public float debugAngle;
         public GameObject debugPoint;
-        
+
         private void Update()
         {
             _timeStep = 10.0f * Time.deltaTime;
@@ -39,8 +41,11 @@ namespace Interaction
             {
                 Debug.Log("grabbing");
                 var localPos = transform.InverseTransformPoint(hand.PalmPoint.position);
-                debugPoint.transform.position = transform.TransformPoint(localPos);
                 localPos = new Vector3(localPos.x, 0.0f, localPos.z);
+                if (useDebug)
+                {
+                    debugPoint.transform.position = transform.TransformPoint(localPos);
+                }
                 if (!_isOn || hand != _lastHand)
                 {
                     _isOn = true;
@@ -54,11 +59,20 @@ namespace Interaction
                     angle += angleDiff;
                 }
                 _lastHand = hand;
+                if (angle > Mathf.PI / 2)
+                    angle = Mathf.PI / 2;
+                if (angle < -Mathf.PI / 2)
+                    angle = -Mathf.PI / 2;
                 Debug.Log("current angle: " + angle);
             }
             else
             {
                 _isOn = false;
+            }
+            
+            if (useDebug)
+            {
+                angle = debugAngle;
             }
         }
     }
