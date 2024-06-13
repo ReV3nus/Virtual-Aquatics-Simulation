@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
+using static UnityEditor.PlayerSettings;
 
 [CustomEditor(typeof(OceanController))]
 public class OceanControllerEditor : Editor
@@ -78,23 +79,37 @@ public class OceanController : MonoBehaviour
     private ComputeBuffer CoefficientWBuffer;
 
     private int kernelCalcSpectrum;
+    //private RenderTexture SpectrumTexture;
     private Vector3[] SpectrumH1, SpectrumH2;//(real, image, omegak)
     private ComputeBuffer SpectrumH1Buffer, SpectrumH2Buffer;
     private int kernelCalcSpecWithTime;
     private Vector2[] FFTCalcBuffer;
     private ComputeBuffer FFTCalcComputeBuffer;
+    private int[] FFTButterflyIndices;
+    private ComputeBuffer FFTButterflyIndicesBuffer;
     private Vector2[] FFTGradientX, FFTGradientZ;
     private ComputeBuffer FFTGradientXBuffer, FFTGradientZBuffer;
+    private Vector2[] Jacobian;
+    private ComputeBuffer JacobianBuffer;
 
     private int kernelFFTZ, kernelFFTX;
     private int kernelUpdate;
     private ComputeBuffer positionBuffer, origPositionBuffer;
-    private ComputeBuffer normalBuffer;
-    private ComputeBuffer gradientBuffer;
+    //private ComputeBuffer normalBuffer;
+    //private ComputeBuffer gradientBuffer;
+
+    private int kernelDFT;
 
 
     [Header("Ocean Mesh")]
     private Mesh oceanMesh;
+    private Material oceanMaterial;
+    //private RenderTexture HeightTexture;
+    //private RenderTexture DxTex, DzTex;
+    //private RenderTexture DisplacementTexture;
+    //private RenderTexture NormalTexture;
+    //private RenderTexture FoldingTexture;
+    private RenderTexture JacobianTexture;
     private Vector3[] positions;
     private Vector3[] normals;
     private Vector3[] gradients;
@@ -119,6 +134,14 @@ public class OceanController : MonoBehaviour
 
     public void InitGlobalComputeShader()
     {
+
+        kernelCalcSpecWithTime = oceanSimulate.FindKernel("CalcPhillipsSpectrumWithTime");
+        kernelFFTZ = oceanSimulate.FindKernel("CalcFFTonAxisZ");
+        kernelFFTX = oceanSimulate.FindKernel("CalcFFTonAxisX");
+        kernelUpdate = oceanSimulate.FindKernel("updateHeight");
+        kernelCalcSpectrum = oceanSimulate.FindKernel("CalcPhillipsSpectrum");
+        kernelDFT = oceanSimulate.FindKernel("CalcHeightByDFT");
+
         oceanSimulate.SetInt("_PatchVertexCount", PatchVertexCount);
         oceanSimulate.SetFloat("_PatchSize", PatchSize);
         oceanSimulate.SetFloats("_WindVelocity", WindVelocity.x, WindVelocity.y);
@@ -126,56 +149,94 @@ public class OceanController : MonoBehaviour
         oceanSimulate.SetFloat("_SpectrumParamA", SpectrumParamA);
         oceanSimulate.SetFloat("_ChoppyWavesLambda", ChoppyWavesLambda);
 
+        //SpectrumTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //HeightTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //DxTex = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //DzTex = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //DisplacementTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //NormalTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        //FoldingTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        JacobianTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+
+        //SpectrumTexture.enableRandomWrite = true;
+        //HeightTexture.enableRandomWrite = true;
+        //DxTex.enableRandomWrite = true;
+        //DzTex.enableRandomWrite = true;
+        //DisplacementTexture.enableRandomWrite = true;
+        //NormalTexture.enableRandomWrite = true;
+        //FoldingTexture.enableRandomWrite = true;
+        JacobianTexture.enableRandomWrite = true;
+
+        //SpectrumTexture.Create();
+        //HeightTexture.Create();
+        //DxTex.Create();
+        //DzTex.Create();
+        //DisplacementTexture.Create();
+        //NormalTexture.Create();
+        //FoldingTexture.Create();
+        JacobianTexture.Create();
+
+        //oceanSimulate.SetTexture(kernelCalcSpectrum, "_SpectrumTexture", SpectrumTexture);
+        //oceanSimulate.SetTexture(kernelCalcSpecWithTime, "_SpectrumTexture", SpectrumTexture);
+        //oceanSimulate.SetTexture(kernelUpdate, "_HeightTexture", HeightTexture);
+        //oceanSimulate.SetTexture(kernelUpdate, "_DxTex", DxTex);
+        //oceanSimulate.SetTexture(kernelUpdate, "_DzTex", DzTex);
+        //oceanSimulate.SetTexture(kernelUpdate, "_DisplacementTexture", DisplacementTexture);
+        oceanSimulate.SetTexture(kernelUpdate, "_JacobianTexture", JacobianTexture);
+
         FFTCalcBuffer = new Vector2[totalVertexCount];
         FFTGradientX = new Vector2[totalVertexCount];
         FFTGradientZ = new Vector2[totalVertexCount];
+        Jacobian = new Vector2[totalVertexCount];
 
         positionBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
         origPositionBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
-        normalBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
-        gradientBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
+        //normalBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
+        //gradientBuffer = new ComputeBuffer(totalVertexCount, 3 * sizeof(float));
         FFTCalcComputeBuffer = new ComputeBuffer(totalVertexCount, 2 * sizeof(float));
         FFTGradientXBuffer = new ComputeBuffer(totalVertexCount, 2 * sizeof(float));
         FFTGradientZBuffer = new ComputeBuffer(totalVertexCount, 2 * sizeof(float));
+        JacobianBuffer = new ComputeBuffer(totalVertexCount, 2 * sizeof(float));
 
         positionBuffer.SetData(positions);
         origPositionBuffer.SetData(positions);
-        normalBuffer.SetData(normals);
-        gradientBuffer.SetData(gradients);
+        //normalBuffer.SetData(normals);
+        //gradientBuffer.SetData(gradients);
         FFTCalcComputeBuffer.SetData(FFTCalcBuffer);
         FFTGradientXBuffer.SetData(FFTGradientX);
         FFTGradientZBuffer.SetData(FFTGradientZ);
-
-        kernelCalcSpecWithTime = oceanSimulate.FindKernel("CalcPhillipsSpectrumWithTime");
-        kernelFFTZ = oceanSimulate.FindKernel("CalcFFTonAxisZ");
-        kernelFFTX = oceanSimulate.FindKernel("CalcFFTonAxisX");
-        kernelUpdate = oceanSimulate.FindKernel("updateHeight");
+        JacobianBuffer.SetData(Jacobian);
 
         oceanSimulate.SetBuffer(kernelCalcSpecWithTime, "_FFTCalcBuffer", FFTCalcComputeBuffer);
         oceanSimulate.SetBuffer(kernelCalcSpecWithTime, "_FFTGradientX", FFTGradientXBuffer);
         oceanSimulate.SetBuffer(kernelCalcSpecWithTime, "_FFTGradientZ", FFTGradientZBuffer);
+        oceanSimulate.SetBuffer(kernelCalcSpecWithTime, "_Jacobian", JacobianBuffer);
 
         oceanSimulate.SetBuffer(kernelFFTZ, "_FFTCalcBuffer", FFTCalcComputeBuffer);
         oceanSimulate.SetBuffer(kernelFFTZ, "_FFTGradientX", FFTGradientXBuffer);
         oceanSimulate.SetBuffer(kernelFFTZ, "_FFTGradientZ", FFTGradientZBuffer);
+        oceanSimulate.SetBuffer(kernelFFTZ, "_Jacobian", JacobianBuffer);
 
         oceanSimulate.SetBuffer(kernelFFTX, "_FFTCalcBuffer", FFTCalcComputeBuffer);
         oceanSimulate.SetBuffer(kernelFFTX, "_FFTGradientX", FFTGradientXBuffer);
         oceanSimulate.SetBuffer(kernelFFTX, "_FFTGradientZ", FFTGradientZBuffer);
+        oceanSimulate.SetBuffer(kernelFFTX, "_Jacobian", JacobianBuffer);
 
         oceanSimulate.SetBuffer(kernelUpdate, "_FFTCalcBuffer", FFTCalcComputeBuffer);
         oceanSimulate.SetBuffer(kernelUpdate, "_FFTGradientX", FFTGradientXBuffer);
         oceanSimulate.SetBuffer(kernelUpdate, "_FFTGradientZ", FFTGradientZBuffer);
-
+        oceanSimulate.SetBuffer(kernelUpdate, "_Jacobian", JacobianBuffer);
 
         oceanSimulate.SetBuffer(kernelUpdate, "positions", positionBuffer);
         oceanSimulate.SetBuffer(kernelUpdate, "origPositions", origPositionBuffer);
-        oceanSimulate.SetBuffer(kernelUpdate, "normals", normalBuffer);
-        oceanSimulate.SetBuffer(kernelUpdate, "gradients", gradientBuffer);
+        //oceanSimulate.SetBuffer(kernelUpdate, "normals", normalBuffer);
+        //oceanSimulate.SetBuffer(kernelUpdate, "gradients", gradientBuffer);
+
+        oceanSimulate.SetBuffer(kernelDFT, "positions", positionBuffer);
+        oceanSimulate.SetBuffer(kernelDFT, "_FFTCalcBuffer", FFTCalcComputeBuffer);
     }
     void InitAndCalcPhillipsSpectrum()
     {
-        kernelCalcSpectrum = oceanSimulate.FindKernel("CalcPhillipsSpectrum");
 
         SpectrumH1 = new Vector3[totalVertexCount];
         SpectrumH2 = new Vector3[totalVertexCount];
@@ -193,19 +254,37 @@ public class OceanController : MonoBehaviour
         SpectrumH1Buffer.GetData(SpectrumH1);
         SpectrumH2Buffer.GetData(SpectrumH2);
     }
-    void InitAndCalcCoefficientW()
+    void InitAndPrepareForFFT()
     {
-        kernalCalcCoefficientW = oceanSimulate.FindKernel("CalcFFTCoefficientW");
+        //kernalCalcCoefficientW = oceanSimulate.FindKernel("CalcFFTCoefficientW");
 
-        CoefficientW = new Vector2[PatchVertexCount];
-        CoefficientWBuffer = new ComputeBuffer(PatchVertexCount, 2 * sizeof(float));
+        CoefficientW = new Vector2[PatchVertexCount + 1];
+        for(int i = 0;i < PatchVertexCount; i++)
+        {
+            float v = -2.0f * Mathf.PI / PatchVertexCount * i;
+            CoefficientW[i] = new Vector2(Mathf.Cos(v), Mathf.Sin(v));
+        }
+        CoefficientW[PatchVertexCount] = CoefficientW[0];
+        CoefficientWBuffer = new ComputeBuffer(PatchVertexCount + 1, 2 * sizeof(float));
         CoefficientWBuffer.SetData(CoefficientW);
-        oceanSimulate.SetBuffer(kernalCalcCoefficientW, "_FFTCoefficientW", CoefficientWBuffer);
+
+        FFTButterflyIndices = new int[PatchVertexCount];
+        FFTButterflyIndicesBuffer = new ComputeBuffer(PatchVertexCount, 1 * sizeof(int));
+        int logN = (int)Mathf.Round(Mathf.Log10(PatchVertexCount)/Mathf.Log10(2));
+        for (int i = 0; i < PatchVertexCount; i++)
+            FFTButterflyIndices[i] = (FFTButterflyIndices[i >> 1] >> 1) | ((i & 1) << (logN - 1));
+        FFTButterflyIndicesBuffer.SetData(FFTButterflyIndices);
+
+       // oceanSimulate.SetBuffer(kernalCalcCoefficientW, "_FFTCoefficientW", CoefficientWBuffer);
         oceanSimulate.SetBuffer(kernelFFTX, "_FFTCoefficientW", CoefficientWBuffer);
         oceanSimulate.SetBuffer(kernelFFTZ, "_FFTCoefficientW", CoefficientWBuffer);
 
-        oceanSimulate.Dispatch(kernalCalcCoefficientW, _groupX, 1, 1);
-        CoefficientWBuffer.GetData(CoefficientW);
+        oceanSimulate.SetBuffer(kernelFFTX, "_FFTButterflyIndices", FFTButterflyIndicesBuffer);
+        oceanSimulate.SetBuffer(kernelFFTZ, "_FFTButterflyIndices", FFTButterflyIndicesBuffer);
+
+        //oceanSimulate.Dispatch(kernalCalcCoefficientW, _groupX, 1, 1);
+        //CoefficientWBuffer.GetData(CoefficientW);
+
     }
 
 
@@ -223,11 +302,20 @@ public class OceanController : MonoBehaviour
     {
         oceanSimulate.Dispatch(kernelFFTZ, _groupX, 1, 1);
         oceanSimulate.Dispatch(kernelFFTX, _groupX, 1, 1);
-
         oceanSimulate.Dispatch(kernelUpdate, _groupX, _groupY, 1);
+
+        //oceanSimulate.Dispatch(kernelDFT, _groupX, _groupY, 1);
+
         positionBuffer.GetData(positions);
-        normalBuffer.GetData(normals);
-        gradientBuffer.GetData(gradients);
+
+        //normalBuffer.GetData(normals);
+        //gradientBuffer.GetData(gradients);
+
+        //oceanMaterial.SetTexture("_HeightTexture", HeightTexture);
+        //oceanMaterial.SetTexture("_DxTex", DxTex);
+        //oceanMaterial.SetTexture("_DzTex", DzTex);
+        //oceanMaterial.SetTexture("_DisplacementTexture", DisplacementTexture);
+        oceanMaterial.SetTexture("_JacobianTexture", JacobianTexture);
     }
 
 
@@ -243,7 +331,7 @@ public class OceanController : MonoBehaviour
 
         InitGlobalComputeShader();
         InitAndCalcPhillipsSpectrum();
-        InitAndCalcCoefficientW();
+        InitAndPrepareForFFT();
     }
 
 
@@ -259,14 +347,14 @@ public class OceanController : MonoBehaviour
     {
         positionBuffer?.Release();
         positionBuffer = null;
-        normalBuffer?.Release();
-        normalBuffer = null;
+        //normalBuffer?.Release();
+        //normalBuffer = null;
         CoefficientWBuffer?.Release();
         CoefficientWBuffer = null;
-        SpectrumH1Buffer?.Release();
-        SpectrumH1Buffer = null;
-        SpectrumH2Buffer?.Release();
-        SpectrumH2Buffer = null;
+        //SpectrumH1Buffer?.Release();
+        //SpectrumH1Buffer = null;
+        //SpectrumH2Buffer?.Release();
+        //SpectrumH2Buffer = null;
         FFTCalcComputeBuffer?.Release();
         FFTCalcComputeBuffer = null;
 
@@ -278,10 +366,10 @@ public class OceanController : MonoBehaviour
         CoefficientW = null;
         Array.Clear(FFTCalcBuffer, 0, FFTCalcBuffer.Length);
         FFTCalcBuffer = null;
-        Array.Clear(SpectrumH1, 0, SpectrumH1.Length);
-        SpectrumH1 = null;
-        Array.Clear(SpectrumH2, 0, SpectrumH2.Length);
-        SpectrumH2 = null;
+        //Array.Clear(SpectrumH1, 0, SpectrumH1.Length);
+        //SpectrumH1 = null;
+        //Array.Clear(SpectrumH2, 0, SpectrumH2.Length);
+        //SpectrumH2 = null;
     }
 
 
@@ -298,17 +386,21 @@ public class OceanController : MonoBehaviour
         positions = new Vector3[totalVertexCount];
         normals = new Vector3[totalVertexCount];
         gradients = new Vector3[totalVertexCount];
+        Vector2[] uvs = new Vector2[totalVertexCount];
+
         for (int z = 0, i = 0; z < PatchVertexCount; z++)
         {
             for (int x = 0; x < PatchVertexCount; x++)
             {
                 positions[i] = new Vector3(x * VertexDistance, 0, z * VertexDistance);
                 normals[i] = new Vector3(0f, 1f, 0f);
+                uvs[i] = new Vector2((float)x / (PatchVertexCount - 1), (float)z / (PatchVertexCount - 1));
                 i++;
             }
         }
         oceanMesh.vertices = positions;
         oceanMesh.normals = normals;
+        oceanMesh.uv = uvs;
 
         int[] triangles = new int[(PatchVertexCount - 1) * (PatchVertexCount - 1) * 6];
         for (int ti = 0, vi = 0, z = 0; z < PatchVertexCount - 1; z++, vi++)
@@ -339,6 +431,8 @@ public class OceanController : MonoBehaviour
             gameObject.GetComponent<MeshCollider>();
         }
         meshFilter.sharedMesh = oceanMesh;
+
+        oceanMaterial = GetComponent<Renderer>().sharedMaterial;
     }
 
     public void UpdatePlaneMesh()
@@ -354,10 +448,9 @@ public class OceanController : MonoBehaviour
 
         InitGlobalComputeShader();
         InitAndCalcPhillipsSpectrum();
-        InitAndCalcCoefficientW();
+        InitAndPrepareForFFT();
 
         CalcPhillipsSpectrumWithTime();
-
 
         CalcHeightWithFFT();
 
@@ -366,19 +459,51 @@ public class OceanController : MonoBehaviour
         //{
         //    for (int x = 0; x < PatchVertexCount; x++)
         //    {
-        //        Debug.Log($"pos [{x},{y}] Value: {FFTCalcBuffer[x + y * PatchVertexCount]*10000}, pos: {positions[x + y * PatchVertexCount]}");
+        //        Debug.Log($"pos [{x},{y}] FFT: {FFTCalcBuffer[x + y * PatchVertexCount] * 1000}  H1: {SpectrumH1[x + y * PatchVertexCount] * 100000} H2: {SpectrumH2[x + y * PatchVertexCount] * 100000}");
         //    }
         //}
+
+        //SaveTextureAsPNG(HeightTexture, "E:\\School\\Unity\\Homeworks\\Project\\Virtual Aquatics Simulation\\Assets\\Images\\HeightTexture.jpg");
+        //SaveTextureAsPNG(DxTex, "E:\\School\\Unity\\Homeworks\\Project\\Virtual Aquatics Simulation\\Assets\\Images\\DxTex.jpg");
+        //SaveTextureAsPNG(DzTex, "E:\\School\\Unity\\Homeworks\\Project\\Virtual Aquatics Simulation\\Assets\\Images\\DzTex.jpg");
+        //SaveTextureAsPNG(DisplacementTexture, "DisplacementTexture.jpg");
 
         UpdatePlaneMesh();
 
+        //ReadRenderTextureData(JacobianTexture);
 
-        //for (int y = 0; y < PatchVertexCount; y++)
-        //{
-        //    for (int x = 0; x < PatchVertexCount; x++)
-        //    {
-        //        Debug.Log($"pos [{x},{y}] Value: {positions[x + y * PatchVertexCount]}, grad [{x},{y}] Value: {gradients[x + y * PatchVertexCount]}, norm [{x},{y}] Value: {normals[x + y * PatchVertexCount]}, calcNorm [{x},{y}] Value: {oceanMesh.normals[x + y * PatchVertexCount]}");
-        //    }
-        //}
+    }
+
+    void SaveTextureAsPNG(RenderTexture rt, string filePath)
+    {
+        Texture2D texture2D = new Texture2D(rt.width, rt.height, TextureFormat.RGBAHalf, false);
+        RenderTexture.active = rt;
+        texture2D.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        texture2D.Apply();
+        RenderTexture.active = null;
+        byte[] bytes = texture2D.EncodeToPNG();
+        System.IO.File.WriteAllBytes(filePath, bytes);
+        Debug.Log("Saved image to: " + filePath);
+    }
+
+
+    void ReadRenderTextureData(RenderTexture rt)
+    {
+        RenderTexture.active = rt;
+        Texture2D texture2D = new Texture2D(rt.width, rt.height, TextureFormat.RGBAHalf, false);
+        texture2D.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        texture2D.Apply();
+
+        Color[] pixels = texture2D.GetPixels();
+        for (int y = 0; y < PatchVertexCount; y++)
+        {
+            for (int x = 0; x < PatchVertexCount; x++)
+            {
+                Color pixel = pixels[y * rt.width + x];
+                Debug.Log($"Pixel at ({x},{y}): {pixel}");
+            }
+        }
+
+        RenderTexture.active = null;
     }
 }

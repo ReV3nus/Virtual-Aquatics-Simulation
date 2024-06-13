@@ -4,6 +4,7 @@
 #pragma kernel CalcFFTonAxisX
 #pragma kernel CalcFFTonAxisZ
 #pragma kernel updateHeight
+#pragma kernel CalcHeightByDFT
 
 #define THREAD_X 8
 #define THREAD_Y 8
@@ -46,11 +47,13 @@ Complex Expi(float x)
     ret.i = sin(x);
     return ret;
 }
-
-RWStructuredBuffer<float3> positions;
-RWStructuredBuffer<float3> origPositions;
-RWStructuredBuffer<float3> normals;
-RWStructuredBuffer<float3> gradients;
+float2 ExpiFloat(float x)
+{
+    float2 ret;
+    ret.x = cos(x);
+    ret.y = sin(x);
+    return ret;
+}
 
 cbuffer TimeBuffer
 {
@@ -72,15 +75,29 @@ float _PatchSize;
 RWStructuredBuffer<float3> _SpectrumH1;
 RWStructuredBuffer<float3> _SpectrumH2;
 float _SpectrumParamA;
+//RWTexture2D<float4> _SpectrumTexture;
 
 
 // For FFT Calculation
 RWStructuredBuffer<float2> _FFTCoefficientW;
+RWStructuredBuffer<int> _FFTButterflyIndices;
 RWStructuredBuffer<float2> _FFTCalcBuffer;
 RWStructuredBuffer<float2> _FFTGradientX;
 RWStructuredBuffer<float2> _FFTGradientZ;
+RWStructuredBuffer<float2> _Jacobian;
 
 
+// Calc Result
+RWStructuredBuffer<float3> positions;
+RWStructuredBuffer<float3> origPositions;
+//RWStructuredBuffer<float3> normals;
+//RWStructuredBuffer<float3> gradients;
+//RWTexture2D<float4> _HeightTexture;
+//RWTexture2D<float4> _DxTex, _DzTex;
+//RWTexture2D<float4> _DisplacementTexture;
+//RWTexture2D<float4> _NormalTexture;
+//RWTexture2D<float4> _FoldingTexture;
+RWTexture2D<float4> _JacobianTexture;
 
 
 
@@ -131,6 +148,15 @@ float4 GaussianRandomVariableNum4(uint seed)
 }
 
 
+
+[numthreads(THREAD_X, 1, 1)]
+void CalcFFTCoefficientW(uint3 id : SV_DispatchThreadID)
+{
+    float x = -2.0 * _Pi / _PatchVertexCount * (id.x - _PatchVertexCount / 2.0);
+    Complex res = Expi(x);
+    _FFTCoefficientW[id.x] = float2(res.r, res.i);
+}
+
 [numthreads(THREAD_X, THREAD_Y, 1)]
 void CalcPhillipsSpectrum(uint3 id : SV_DispatchThreadID)
 {
@@ -171,18 +197,32 @@ void CalcPhillipsSpectrum(uint3 id : SV_DispatchThreadID)
     //float2 CosMult = H1 + H2;
     //float2 SinMult = (H1 - H2) * i
     int index = getIndex(id);
+    
     _SpectrumH1[index] = float3(H1.r, H1.i, omega_k);
-    _SpectrumH2[index] = float3(H2.r, H2.i,-omega_k);
+    _SpectrumH2[index] = float3(H2.r, H2.i, -omega_k);
+    
+    //Phil = _SpectrumParamA * exp(-1 / (k_length2 * L2)) / k_length4 * kdotw2;
+    //_SpectrumH1[index] = float3(Phil, Phil, omega_k);
+    //_SpectrumH2[index] = float3(Phil, Phil, -omega_k);
+    
+    //_SpectrumTexture[id.xy] = float4(H1.r + H2.r, H1.i - H2.i, omega_k, 0);
+    //_SpectrumTexture[id.xy] = float4(Phil, Phil, omega_k, 0);
+
 }
 
 [numthreads(THREAD_X, THREAD_Y, 1)]
 void CalcPhillipsSpectrumWithTime(uint3 id : SV_DispatchThreadID)
 {
     int index = getIndex(id);
+    
     Complex res1 = ComplexMult(Float2Complex(_SpectrumH1[index].x, _SpectrumH1[index].y), Expi(_SpectrumH1[index].z * _Time));
     Complex res2 = ComplexMult(Float2Complex(_SpectrumH2[index].x, _SpectrumH2[index].y), Expi(_SpectrumH2[index].z * _Time));
     float r = res1.r + res2.r;
     float i = res1.i + res2.i;
+    //Complex E = Expi(_SpectrumTexture[id.xy].z * _Time);
+    //float r = _SpectrumTexture[id.xy].x * E.r - _SpectrumTexture[id.xy].y * E.i;
+    //float i = 0;
+    
     _FFTCalcBuffer[index] = float2(r, i);
     
     float k_x = 2.0 * _Pi / _PatchSize * (id.x - _PatchVertexCount / 2.0);
@@ -190,17 +230,8 @@ void CalcPhillipsSpectrumWithTime(uint3 id : SV_DispatchThreadID)
     float k_length = max(sqrt(k_x * k_x + k_z * k_z), 0.001);
     _FFTGradientX[index] = k_x / k_length * float2(i, -r);
     _FFTGradientZ[index] = k_z / k_length * float2(i, -r);
+    _Jacobian[index] = (k_x * k_x + k_z * k_z) / k_length * float2(r, i);
 
-}
-
-
-
-[numthreads(THREAD_X, 1, 1)]
-void CalcFFTCoefficientW(uint3 id : SV_DispatchThreadID)
-{
-    float x = -2.0 * _Pi / _PatchVertexCount * (id.x - _PatchVertexCount / 2.0);
-    Complex res = Expi(x);
-    _FFTCoefficientW[id.x] = float2(res.r, res.i);
 }
 
 [numthreads(THREAD_X, 1, 1)]
@@ -208,29 +239,32 @@ void CalcFFTonAxisZ(uint3 id : SV_DispatchThreadID)
 {
     // s[i] = H[x][i] = _FFTCalcBuffer[x+i*N]
     int curX = id.x;
-    
-    for (int i = 0, j = 0; i < _PatchVertexCount; ++i)
+    int i, d;
+    for (i = 0; i < _PatchVertexCount; i++)
     {
-        if (i < j)
-        {
-            int ii = i * _PatchVertexCount + curX, jj = j * _PatchVertexCount + curX;
-            float2 tmp;
-            tmp = _FFTCalcBuffer[ii], _FFTCalcBuffer[ii] = _FFTCalcBuffer[jj], _FFTCalcBuffer[jj] = tmp;
-            tmp = _FFTGradientX[ii], _FFTGradientX[ii] = _FFTGradientX[jj], _FFTGradientX[jj] = tmp;
-            tmp = _FFTGradientZ[ii], _FFTGradientZ[ii] = _FFTGradientZ[jj], _FFTGradientZ[jj] = tmp;
-            //float2 tmp = _FFTCalcBuffer[i * _PatchVertexCount + curX];
-            //_FFTCalcBuffer[i * _PatchVertexCount + curX] = _FFTCalcBuffer[j * _PatchVertexCount + curX];
-            //_FFTCalcBuffer[j * _PatchVertexCount + curX] = tmp;
-        }
-        int k = _PatchVertexCount >> 1;
-        while ((j ^= k) < k)
-        {
-            k >>= 1;
-        }
+        //F[i] = F[i] * Expi((N / 2.0 - i) * _Pi);
+        int ii = i * _PatchVertexCount + curX;
+        float2 expi = ExpiFloat((_PatchVertexCount / 2.0 - i) * _Pi);
+        _FFTCalcBuffer[ii] = ComplexMultFloat(_FFTCalcBuffer[ii], expi);
+        _FFTGradientX[ii] = ComplexMultFloat(_FFTGradientX[ii], expi);
+        _FFTGradientZ[ii] = ComplexMultFloat(_FFTGradientZ[ii], expi);
+        _Jacobian[ii] = ComplexMultFloat(_Jacobian[ii], expi);
     }
     
-
-    for (int i = 1, d = _PatchVertexCount >> 1; i < _PatchVertexCount; i <<= 1, d >>= 1)
+    for (i = 0; i < _PatchVertexCount; i++)
+    {
+        int ii = i * _PatchVertexCount + curX, jj = _FFTButterflyIndices[i] * _PatchVertexCount + curX;
+        if (ii >= jj)
+            continue;
+        float2 tmp;
+        tmp = _FFTCalcBuffer[ii], _FFTCalcBuffer[ii] = _FFTCalcBuffer[jj], _FFTCalcBuffer[jj] = tmp;
+        tmp = _FFTGradientX[ii], _FFTGradientX[ii] = _FFTGradientX[jj], _FFTGradientX[jj] = tmp;
+        tmp = _FFTGradientZ[ii], _FFTGradientZ[ii] = _FFTGradientZ[jj], _FFTGradientZ[jj] = tmp;
+        tmp = _Jacobian[ii], _Jacobian[ii] = _Jacobian[jj], _Jacobian[jj] = tmp;
+    }
+    
+    
+    for (i = 1, d = _PatchVertexCount >> 1; i < _PatchVertexCount; i <<= 1, d >>= 1)
     {
         for (int j = 0; j < _PatchVertexCount; j += i << 1)
         {
@@ -248,8 +282,23 @@ void CalcFFTonAxisZ(uint3 id : SV_DispatchThreadID)
                 x = _FFTGradientZ[ii], y = ComplexMultFloat(_FFTCoefficientW[kk], _FFTGradientZ[jj]);
                 _FFTGradientZ[ii] = x + y;
                 _FFTGradientZ[jj] = x - y;
+                
+                x = _Jacobian[ii], y = ComplexMultFloat(_FFTCoefficientW[kk], _Jacobian[jj]);
+                _Jacobian[ii] = x + y;
+                _Jacobian[jj] = x - y;
             }
         }
+    }
+    
+    for (i = 0; i < _PatchVertexCount; i++)
+    {
+        //F[i] = F[i] * Expi(-_Pi * (i));
+        int ii = i * _PatchVertexCount + curX;
+        float2 expi = ExpiFloat(-_Pi * i);
+        _FFTCalcBuffer[ii] = ComplexMultFloat(_FFTCalcBuffer[ii], expi);
+        _FFTGradientX[ii] = ComplexMultFloat(_FFTGradientX[ii], expi);
+        _FFTGradientZ[ii] = ComplexMultFloat(_FFTGradientZ[ii], expi);
+        _Jacobian[ii] = ComplexMultFloat(_Jacobian[ii], expi);
     }
 }
 
@@ -258,27 +307,28 @@ void CalcFFTonAxisX(uint3 id : SV_DispatchThreadID)
 {
     // s[i] = H[i][y] = _FFTCalcBuffer[i+y*N]
     int curY = id.x;
-    int i, j, d;
-    
-    for (i = 0, j = 0; i < _PatchVertexCount; ++i)
+    int i, d;
+    for (i = 0; i < _PatchVertexCount; i++)
     {
-        if (i < j)
-        {
-            int ii = i + _PatchVertexCount * curY, jj = j + _PatchVertexCount * curY;
-            float2 tmp;
-            tmp = _FFTCalcBuffer[ii], _FFTCalcBuffer[ii] = _FFTCalcBuffer[jj], _FFTCalcBuffer[jj] = tmp;
-            tmp = _FFTGradientX[ii], _FFTGradientX[ii] = _FFTGradientX[jj], _FFTGradientX[jj] = tmp;
-            tmp = _FFTGradientZ[ii], _FFTGradientZ[ii] = _FFTGradientZ[jj], _FFTGradientZ[jj] = tmp;
-            
-            //float2 tmp = _FFTCalcBuffer[i + _PatchVertexCount * curY];
-            //_FFTCalcBuffer[i + _PatchVertexCount * curY] = _FFTCalcBuffer[j + _PatchVertexCount * curY];
-            //_FFTCalcBuffer[j + _PatchVertexCount * curY] = tmp;
-        }
-        int k = _PatchVertexCount >> 1;
-        while ((j ^= k) < k)
-        {
-            k >>= 1;
-        }
+        //F[i] = F[i] * Expi((N / 2.0 - i) * _Pi);
+        int ii = i + _PatchVertexCount * curY;
+        float2 expi = ExpiFloat((_PatchVertexCount / 2.0 - i) * _Pi);
+        _FFTCalcBuffer[ii] = ComplexMultFloat(_FFTCalcBuffer[ii], expi);
+        _FFTGradientX[ii] = ComplexMultFloat(_FFTGradientX[ii], expi);
+        _FFTGradientZ[ii] = ComplexMultFloat(_FFTGradientZ[ii], expi);
+        _Jacobian[ii] = ComplexMultFloat(_Jacobian[ii], expi);
+    }
+    
+    for (i = 0; i < _PatchVertexCount; i++)
+    {
+        int ii = i + _PatchVertexCount * curY, jj = _FFTButterflyIndices[i] + _PatchVertexCount * curY;
+        if (ii >= jj)
+            continue;
+        float2 tmp;
+        tmp = _FFTCalcBuffer[ii], _FFTCalcBuffer[ii] = _FFTCalcBuffer[jj], _FFTCalcBuffer[jj] = tmp;
+        tmp = _FFTGradientX[ii], _FFTGradientX[ii] = _FFTGradientX[jj], _FFTGradientX[jj] = tmp;
+        tmp = _FFTGradientZ[ii], _FFTGradientZ[ii] = _FFTGradientZ[jj], _FFTGradientZ[jj] = tmp;
+        tmp = _Jacobian[ii], _Jacobian[ii] = _Jacobian[jj], _Jacobian[jj] = tmp;
     }
     
     for (i = 1, d = _PatchVertexCount >> 1; i < _PatchVertexCount; i <<= 1, d >>= 1)
@@ -299,10 +349,24 @@ void CalcFFTonAxisX(uint3 id : SV_DispatchThreadID)
                 x = _FFTGradientZ[ii], y = ComplexMultFloat(_FFTCoefficientW[kk], _FFTGradientZ[jj]);
                 _FFTGradientZ[ii] = x + y;
                 _FFTGradientZ[jj] = x - y;
+                
+                x = _Jacobian[ii], y = ComplexMultFloat(_FFTCoefficientW[kk], _Jacobian[jj]);
+                _Jacobian[ii] = x + y;
+                _Jacobian[jj] = x - y;
             }
         }
     }
     
+    for (i = 0; i < _PatchVertexCount; i++)
+    {
+        //F[i] = F[i] * Expi(-_Pi * (i));
+        int ii = i + _PatchVertexCount * curY;
+        float2 expi = ExpiFloat(-_Pi * i);
+        _FFTCalcBuffer[ii] = ComplexMultFloat(_FFTCalcBuffer[ii], expi);
+        _FFTGradientX[ii] = ComplexMultFloat(_FFTGradientX[ii], expi);
+        _FFTGradientZ[ii] = ComplexMultFloat(_FFTGradientZ[ii], expi);
+        _Jacobian[ii] = ComplexMultFloat(_Jacobian[ii], expi);
+    }
 }
 
 
@@ -313,13 +377,48 @@ void updateHeight(uint3 id : SV_DispatchThreadID)
     float2 pos = positions[index].xz;
     
     float Scale_Factor = _PatchSize / _PatchVertexCount * _Amplitude;
+    float h = _FFTCalcBuffer[index].x * Scale_Factor;
     float dx = _FFTGradientX[index].x * Scale_Factor;
     float dz = _FFTGradientZ[index].x * Scale_Factor;
+    float J = _Jacobian[index].x * Scale_Factor * _ChoppyWavesLambda + 1;
     
     positions[index].x = origPositions[index].x + _ChoppyWavesLambda * dx;
     positions[index].z = origPositions[index].z + _ChoppyWavesLambda * dz;
     positions[index].y = _FFTCalcBuffer[index].x * Scale_Factor;
     
-    gradients[index] = float3(dx, 0, dz);
-    normals[index] = normalize(float3(-dx, 1, -dz));
+    _JacobianTexture[id.xy] = float4(J, J, J, 1);
+    //gradients[index] = float3(dx, 0, dz);
+    //normals[index] = normalize(float3(-dx, 1, -dz));
+    //_HeightTexture[id.xy] = float4(h, h, h, 1);
+    //_DxTex[id.xy] = float4(dx, dx, dx, 1);
+    //_DzTex[id.xy] = float4(dz, dz, dz, 1);
+//    _DisplacementTexture[id.xy] = float4(dx, h, dz, 1);
+    //_NormalTexture;
+    //_FoldingTexture;
 }
+
+[numthreads(THREAD_X, THREAD_Y, 1)]
+void CalcHeightByDFT(uint3 id : SV_DispatchThreadID)
+{
+    int index = getIndex(id);
+    float x = positions[index].x;
+    float z = positions[index].z;
+    Complex sum;
+    sum.r = 0, sum.i = 0;
+    for (int i = 0; i < _PatchVertexCount; i++)
+    {
+        for (int j = 0; j < _PatchVertexCount; j++)
+        {
+            float k_x = 2.0 * _Pi / _PatchSize * (i - _PatchVertexCount / 2.0);
+            float k_z = 2.0 * _Pi / _PatchSize * (j - _PatchVertexCount / 2.0);
+            //Complex res = ComplexMult(Float2Complex(_FFTCalcBuffer[j * _PatchVertexCount + i].x, _FFTCalcBuffer[j * _PatchVertexCount + i].y), Expi(k_x * x + k_z * z));
+            Complex res = ComplexMult(Float2Complex(_FFTCalcBuffer[j * _PatchVertexCount + i].x, _FFTCalcBuffer[j * _PatchVertexCount + i].y), Expi(2 * _Pi / _PatchVertexCount *
+            ((i - _PatchVertexCount / 2.0) * (id.x - _PatchVertexCount / 2.0) + (j - _PatchVertexCount / 2.0) * (id.y - _PatchVertexCount / 2.0))));
+            sum.r += res.r;
+            sum.i += res.i;
+        }
+    }
+    
+    positions[index].y = sum.r / 30;
+
+}   

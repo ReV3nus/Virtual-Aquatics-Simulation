@@ -1,5 +1,7 @@
+
 using UnityEditor;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 [CustomEditor(typeof(TestScript))]
 public class TestScriptEditor : Editor
@@ -105,4 +107,21 @@ public class TestScript : MonoBehaviour
             Debug.Log($"s [{i}] = {s[i]}");
         return 0;
     }
+    //void fast_fast_tle(complex* A, int type)
+    //{
+    //    for (int i = 0; i < limit; i++)
+    //        if (i < r[i]) swap(A[i], A[r[i]]);//求出要迭代的序列 
+    //    for (int mid = 1; mid < limit; mid <<= 1)//待合并区间的中点
+    //    {
+    //        complex Wn(cos(Pi/ mid) , type* sin(Pi/ mid) ); //单位根 
+    //    for (int R = mid << 1, j = 0; j < limit; j += R)//R是区间的右端点，j表示前已经到哪个位置了 
+    //    {
+    //        complex w(1,0);//幂 
+    //    for (int k = 0; k < mid; k++, w = w * Wn)//枚举左半部分 
+    //    {
+    //        complex x = A[j + k], y = w * A[j + mid + k];//蝴蝶效应 
+    //        A[j + k] = x + y;
+    //        A[j + mid + k] = x - y;
+    //    }
+    //}
 }

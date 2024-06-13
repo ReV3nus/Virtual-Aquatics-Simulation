@@ -6,6 +6,15 @@ Shader "ReV3nus/OceanShader"
         _MainColor ("Color", Color) = (1,1,1,1)
         _Metallicness("Metallicness",Range(0,1)) = 0
         _Glossiness("Smoothness",Range(0,1)) = 1
+
+        // _HeightTexture ("Height Texture", 2D) = "white" {}
+        // _DxTex ("D(x) Texture", 2D) = "white" {}
+        // _DzTex ("D(z) Texture", 2D) = "white" {}
+        // _DisplacementTexture ("Displacement Texture", 2D) = "white" {}
+        _JacobianTexture ("Jacobian Texture", 2D) = "white" {}
+        _FoamThreshold ("Foam Threshold", Range(0,1)) = 0.5
+        _FoamSmoothRange ("Foam Smoothstep Range", Range(0,1)) = 0.5
+        _FoamIntensity ("Foam Intensity", Range(0,1)) = 1.0
         
         //_Amplitude("Amplitude", float) = 1
     }
@@ -42,11 +51,17 @@ Shader "ReV3nus/OceanShader"
             
             // sampler2D _MainTex;
             // float4 _MainTex_ST;
+            // sampler2D _NormalMap;
+            // float4 _NormalMap_ST;
+            sampler2D _JacobianTexture;
+            float4 _JacobianTexture_ST;
             float4 _MainColor;
-            sampler2D _NormalMap;
-            float4 _NormalMap_ST;
             float _Glossiness;
             float _Metallicness;
+
+            float _FoamThreshold;
+            float _FoamSmoothRange;
+            float _FoamIntensity;
             //float _Amplitude;
 
 
@@ -81,7 +96,7 @@ Shader "ReV3nus/OceanShader"
                 o.position = UnityObjectToClipPos(v.position);
                 o.worldPos = mul(unity_ObjectToWorld, v.position).xyz;
                 o.normal = UnityObjectToWorldNormal(v.normal);
-                o.uv=v.uv;//o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = TRANSFORM_TEX(v.uv, _JacobianTexture);
                 return o;
             }
 
@@ -122,6 +137,7 @@ Shader "ReV3nus/OceanShader"
             {
                 //float4 mainTex = tex2D( _MainTex, i.uv );
                 float4 mainTex = _MainColor;
+                float4 Jacobian = tex2D(_JacobianTexture, i.uv);
 
                 //// Vectors
                 float3 L = normalize(lerp(_WorldSpaceLightPos0.xyz, _WorldSpaceLightPos0.xyz - i.worldPos.xyz,_WorldSpaceLightPos0.w));
@@ -181,8 +197,10 @@ Shader "ReV3nus/OceanShader"
                 float4 color = float4(directLight * _LightColor0.rgb + indirectLight,1);
                 color += float4( UNITY_LIGHTMODEL_AMBIENT.xyz * albedo,1);
 
-                //return float4(N.x/2.0+0.5,0,N.z/2.0+0.5,1);
-                return color;
+                float J = Jacobian.x;
+                float FoamValue = (1 - smoothstep(_FoamThreshold - _FoamSmoothRange, _FoamThreshold, J)) * _FoamIntensity;
+                float3 FoamColor = (FoamValue,FoamValue,FoamValue);
+                return float4(color.xyz+FoamColor, 1);
             }
             ENDCG
         }
