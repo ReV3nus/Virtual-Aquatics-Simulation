@@ -1,27 +1,28 @@
 ﻿using System;
 using System.Linq;
-using UnityEngine;
 using Oculus.Interaction.HandGrab;
+using UnityEngine;
 
 namespace Interaction
 {
-    public class SteeringWheelController : MonoBehaviour
+    public class LeverController : MonoBehaviour
     {
         public HandGrabInteractable handGrabInteractable;
+        // public float maxPower;
 
         public float angle { get; private set; } // rad
         public float lastFrameAngle { get; private set; }
+        public float powerFactor => (angle - AngleLowerBound) / (AngleUpperBound - AngleLowerBound);
         private bool _isOn;
         private float _timeStep;
         private float _lastGrabAngle;
         private HandGrabInteractor _lastHand;
 
-        private const float AngleLowerBound = -Mathf.PI / 2;
-        private const float AngleUpperBound = Mathf.PI / 2;
+        private const float AngleLowerBound = 0;
+        private const float AngleUpperBound = Mathf.PI / 3;
 
         public bool useDebug;
         public float debugAngle;
-        public GameObject debugPoint;
 
         private void Start()
         {
@@ -37,9 +38,9 @@ namespace Interaction
         private void LateUpdate()
         {
             transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
-            transform.localRotation = Quaternion.Slerp(Quaternion.Euler(0.0f, lastFrameAngle * Mathf.Rad2Deg, 0.0f),
-                Quaternion.Euler(0.0f, angle * Mathf.Rad2Deg, 0.0f), _timeStep);
-            lastFrameAngle = transform.localRotation.eulerAngles.y * Mathf.Deg2Rad;
+            transform.localRotation = Quaternion.Slerp(Quaternion.Euler(lastFrameAngle * Mathf.Rad2Deg, 0.0f, 0.0f),
+                Quaternion.Euler(angle * Mathf.Rad2Deg, 0.0f, 0.0f), _timeStep);
+            lastFrameAngle = transform.localRotation.eulerAngles.x * Mathf.Deg2Rad;
         }
 
         private void ProcessInput()
@@ -50,22 +51,33 @@ namespace Interaction
                 Debug.Log("grabbing");
                 transform.localRotation = Quaternion.identity;
                 var localPos = transform.InverseTransformPoint(hand.PalmPoint.position);
-                localPos = new Vector3(localPos.x, 0.0f, localPos.z);
-                if (useDebug)
-                {
-                    debugPoint.transform.position = transform.TransformPoint(localPos);
-                }
+                localPos = new Vector3(0.0f, localPos.y, localPos.z);
                 if (!_isOn || hand != _lastHand)
                 {
                     _isOn = true;
-                    _lastGrabAngle = Quaternion.LookRotation(localPos).eulerAngles.y * Mathf.Deg2Rad;
+                    _lastGrabAngle = Quaternion.LookRotation(localPos).eulerAngles.x * Mathf.Deg2Rad;
+                    // if (_lastGrabAngle > Mathf.PI)
+                    //     _lastGrabAngle -= Mathf.PI * 2;
                 }
                 else
                 {
-                    var curAngle = Quaternion.LookRotation(localPos).eulerAngles.y * Mathf.Deg2Rad;
-                    var angleDiff = curAngle - _lastGrabAngle;
-                    _lastGrabAngle = curAngle;
-                    angle += angleDiff;
+                    var curAngle = Quaternion.LookRotation(localPos).eulerAngles.x * Mathf.Deg2Rad;
+                    Debug.Log(curAngle);
+                    if (curAngle > Mathf.PI * 1.5)
+                    {
+                        // if (Mathf.Abs(curAngle - _lastGrabAngle) > Mathf.PI)
+                        // {
+                        //     if (curAngle > 0.0f)
+                        //         curAngle -= Mathf.PI * 2;
+                        //     else
+                        //         curAngle += Mathf.PI * 2;
+                        // }
+                        var angleDiff = curAngle - _lastGrabAngle;
+                        _lastGrabAngle = curAngle;
+                        angle += angleDiff;
+                        Debug.Log("angle diff: " + angleDiff);
+                        Debug.Log("angle: " + angle);
+                    }
                 }
                 _lastHand = hand;
                 if (angle > AngleUpperBound)
@@ -78,7 +90,7 @@ namespace Interaction
             {
                 _isOn = false;
             }
-            
+
             if (useDebug)
             {
                 angle = debugAngle;

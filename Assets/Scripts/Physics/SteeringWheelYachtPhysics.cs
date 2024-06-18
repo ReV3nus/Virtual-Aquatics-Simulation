@@ -12,6 +12,7 @@ namespace Physics
 
         private Rigidbody _rigidbody;
         public SteeringWheelController steeringWheelController;
+        public LeverController leverController;
 
         public float power; // may control this with levers
         public float rudderPower;
@@ -45,9 +46,12 @@ namespace Physics
             var front = transform.TransformVector(Vector3.forward);
             front = new Vector3(front.x, 0.0f, front.z);
             front = Vector3.Normalize(front);
+
+            var curPower = power * leverController.powerFactor;
+            var curRudderPower = rudderPower * leverController.powerFactor;
             
-            var force = front * power;
-            var spinForce = direction * rudderPower;
+            var force = front * curPower;
+            var spinForce = direction * curRudderPower;
             var dragForce = -_rigidbody.velocity * waterDrag;
             
             _rigidbody.AddForceAtPosition(force, powerSource.position);

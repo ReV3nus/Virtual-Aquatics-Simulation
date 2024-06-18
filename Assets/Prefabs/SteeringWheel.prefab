@@ -243,7 +243,7 @@ MonoBehaviour:
   _maxGrabPoints: -1
   _rigidbody: {fileID: 3031737700823212584}
   _kinematicWhileSelected: 1
-  _throwWhenUnselected: 1
+  _throwWhenUnselected: 0
 --- !u!114 &5424081396617240012
 MonoBehaviour:
   m_ObjectHideFlags: 0
