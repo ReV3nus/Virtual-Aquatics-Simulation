@@ -1,0 +1,188 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Init
+#pragma kernel Step
+
+#define THREAD_X 8
+#define THREAD_Y 8
+
+//顶点位置
+RWStructuredBuffer<float3> positions;
+//顶点速度
+RWStructuredBuffer<float3> velocities;
+
+//x表示横向顶点数量,y表示纵向顶点数量,z = x * y
+uint3 size;
+//弹性系数.xyz分别对应结构弹簧、剪力弹簧、弯曲弹簧
+float3 springKs;
+//弹簧原长.xyz分别对应结构弹簧、剪力弹簧、弯曲弹簧
+uniform float3 restLengths;
+//单个顶点的质量
+uniform float mass;
+//单次迭代时间间隔
+float dt;
+
+//根据线程ID，获取对应顶点的索引
+static uint getIndex(uint2 id) {
+    return id.y * size.x + id.x;
+}
+//获取指定索引的顶点位置
+static float3 getPosition(uint index) {
+    return positions[index].xyz;
+}
+//获取指定线程ID的顶点位置
+static float3 getPosition(uint2 id) {
+    return positions[getIndex(id)].xyz;
+}
+//获取指定索引的顶点速度
+static float3 getVelocity(uint index) {
+    return velocities[index];
+}
+//设置速度
+static void setVelocity(uint index, float3 vel) {
+    velocities[index] = vel;
+}
+//设置位置
+static void setPosition(uint index, float3 pos) {
+    positions[index] = pos;
+}
+//判断索引是否可用
+static bool isValidateId(uint2 id) {
+    return id.x >= 0 && id.x < size.x && id.y >= 0 && id.y < size.y;
+}
+
+
+static float3 calculateF(uint2 id, float3 position, float3 velocity) {
+    uint index = getIndex(id);
+    float3 f = float3(0, 0, 0);
+    
+    //TODO:计算重力
+    //F = mg
+    float3 Fg = float3(0, -9.8f, 0) * mass;
+
+    //TODO:计算弹性力
+    
+    float3 Structure = float3(0, 0, 0);
+    //Up->Down->Left->Right
+    if (id.y > 0)
+    {
+        float3 dir = getPosition(uint2(id.x, id.y - 1)) - position;
+        float dist = length(dir);
+        Structure += -springKs.x * dir / dist * (restLengths.x - dist);
+    }
+    if (id.y < size.y - 1)
+    {
+        float3 dir = getPosition(uint2(id.x, id.y + 1)) - position;
+        float dist = length(dir);
+        Structure += -springKs.x * dir / dist * (restLengths.x - dist);
+    }
+    if (id.x > 0)
+    {
+        float3 dir = getPosition(uint2(id.x - 1, id.y)) - position;
+        float dist = length(dir);
+        Structure += -springKs.x * dir / dist * (restLengths.x - dist);
+    }
+    if (id.x < size.x - 1)
+    {
+        float3 dir = getPosition(uint2(id.x + 1, id.y)) - position;
+        float dist = length(dir);
+        Structure += -springKs.x * dir / dist * (restLengths.x - dist);
+    }
+    
+    float3 Shear = float3(0, 0, 0);
+    //LU->RU->LD->RD
+    if (id.x > 0 && id.y > 0)
+    {
+        float3 dir = getPosition(uint2(id.x - 1, id.y - 1)) - position;
+        float dist = length(dir);
+        Shear += -springKs.y * dir / dist * (restLengths.y - dist);
+    }
+    if (id.x > 0 && id.y < size.y - 1)
+    {
+        float3 dir = getPosition(uint2(id.x - 1, id.y + 1)) - position;
+        float dist = length(dir);
+        Shear += -springKs.y * dir / dist * (restLengths.y - dist);
+    }
+    if (id.x < size.x - 1 && id.y > 0)
+    {
+        float3 dir = getPosition(uint2(id.x + 1, id.y - 1)) - position;
+        float dist = length(dir);
+        Shear += -springKs.y * dir / dist * (restLengths.y - dist);
+    }
+    if (id.x < size.x - 1 && id.y < size.y - 1)
+    {
+        float3 dir = getPosition(uint2(id.x + 1, id.y + 1)) - position;
+        float dist = length(dir);
+        Shear += -springKs.y * dir / dist * (restLengths.y - dist);
+    }
+
+    float3 Flexion = float3(0, 0, 0);
+    //Up->Down->Left->Right
+    if (id.y > 1)
+    {
+        float3 dir = getPosition(uint2(id.x, id.y - 2)) - position;
+        float dist = length(dir);
+        Flexion += -springKs.z * dir / dist * (restLengths.z - dist);
+    }
+    if (id.y < size.y - 2)
+    {
+        float3 dir = getPosition(uint2(id.x, id.y + 2)) - position;
+        float dist = length(dir);
+        Flexion += -springKs.z * dir / dist * (restLengths.z - dist);
+    }
+    if (id.x > 1)
+    {
+        float3 dir = getPosition(uint2(id.x - 2, id.y)) - position;
+        float dist = length(dir);
+        Flexion += -springKs.z * dir / dist * (restLengths.z - dist);
+    }
+    if (id.x < size.x - 2)
+    {
+        float3 dir = getPosition(uint2(id.x + 2, id.y)) - position;
+        float dist = length(dir);
+        Flexion += -springKs.z * dir / dist * (restLengths.z - dist);
+    }
+
+    //TODO:计算阻尼力
+    float damping = 0.2f;
+    float3 Fd = -damping * velocity;
+
+    
+    f = Fg + Structure +Shear + Flexion + Fd;
+    return f;
+}
+
+
+[numthreads(THREAD_X, THREAD_Y, 1)]
+void Init(uint3 id : SV_DispatchThreadID)
+{
+    //初始化顶点位置和速度
+    uint index = getIndex(id.xy);
+    positions[index] = float3(id.x * restLengths.x, 0, id.y * restLengths.x);
+    velocities[index] = float3(0, 0, 0);
+}
+
+[numthreads(THREAD_X, THREAD_Y, 1)]
+void Step(uint3 id : SV_DispatchThreadID)
+{
+    //固定两个顶点
+    if (id.y == 0 && (id.x == 0 || id.x == size.x - 1)) {
+        return;
+    }
+
+    uint index = getIndex(id.xy);
+
+    //TODO:计算受力和加速度
+    float3 position = getPosition(index);
+    float3 velocity = getVelocity(index);
+    float3 A = calculateF(uint2(id.x, id.y), position, velocity) / mass;
+    velocity += A * dt;
+    position += velocity * dt;
+    
+    //TODO:更新速度
+    setVelocity(index, velocity);
+
+    //TODO:更新位置
+    setPosition(index, position);
+
+}
+

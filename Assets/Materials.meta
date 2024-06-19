@@ -1,5 +1,9 @@
 fileFormatVersion: 2
-guid: c0674921fd9af8f40969a330f8f44893
+<<<<<<<< HEAD:Assets/Editor.meta
+guid: eedf2eec99f34217a2e8b0e05354a616
+========
+guid: 961f8c1f008b972458fca5451768c9fe
+>>>>>>>> refs/heads/ocean:Assets/Materials.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
