@@ -37,7 +37,7 @@ namespace Physics
         private void ApplyForces()
         {
             var r = powerSource.position - _rigidbody.centerOfMass;
-            r = new Vector3(r.x, 0.0f, r.z);
+            // r = new Vector3(r.x, 0.0f, r.z);
             var angle = -steeringWheelController.angle * rotationReduceFactor;
             var direction = new Vector3(Mathf.Sin(angle), 0.0f, Mathf.Cos(angle));
             direction = transform.TransformVector(direction);
@@ -51,11 +51,13 @@ namespace Physics
             var curRudderPower = rudderPower * leverController.powerFactor;
             
             var force = front * curPower;
-            var spinForce = direction * curRudderPower;
+            var spinForce = -direction * curRudderPower;
             var dragForce = -_rigidbody.velocity * waterDrag;
+            var spinTorque = Vector3.Cross(r, spinForce);
             
             _rigidbody.AddForceAtPosition(force, powerSource.position);
-            _rigidbody.AddForceAtPosition(spinForce, powerSource.position);
+            // _rigidbody.AddForceAtPosition(spinForce, powerSource.position);
+            _rigidbody.AddTorque(spinTorque);
             _rigidbody.AddForce(dragForce, ForceMode.Acceleration);
         }
 

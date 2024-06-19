@@ -2,6 +2,7 @@
 using System.Linq;
 using Oculus.Interaction.HandGrab;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Interaction
 {
@@ -21,12 +22,14 @@ namespace Interaction
         private const float AngleLowerBound = 0;
         private const float AngleUpperBound = Mathf.PI / 3;
 
-        public bool useDebug;
+        public bool debug;
         public float debugAngle;
 
         private void Start()
         {
             _isOn = false;
+            angle = 0.0f;
+            lastFrameAngle = 0.0f;
         }
 
         private void Update()
@@ -37,7 +40,7 @@ namespace Interaction
 
         private void LateUpdate()
         {
-            transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+            transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.Slerp(Quaternion.Euler(lastFrameAngle * Mathf.Rad2Deg, 0.0f, 0.0f),
                 Quaternion.Euler(angle * Mathf.Rad2Deg, 0.0f, 0.0f), _timeStep);
             lastFrameAngle = transform.localRotation.eulerAngles.x * Mathf.Deg2Rad;
@@ -46,38 +49,23 @@ namespace Interaction
         private void ProcessInput()
         {
             var hand = handGrabInteractable.Interactors.FirstOrDefault();
-            if (hand != null)
+            if (hand is not null)
             {
-                Debug.Log("grabbing");
                 transform.localRotation = Quaternion.identity;
-                var localPos = transform.InverseTransformPoint(hand.PalmPoint.position);
-                localPos = new Vector3(0.0f, localPos.y, localPos.z);
+                var localGrabPos = transform.InverseTransformPoint(hand.PalmPoint.position);
+                localGrabPos = new Vector3(0.0f, localGrabPos.y, localGrabPos.z);
+                var curAngle = Mathf.Atan(localGrabPos.z / localGrabPos.y);
                 if (!_isOn || hand != _lastHand)
                 {
                     _isOn = true;
-                    _lastGrabAngle = Quaternion.LookRotation(localPos).eulerAngles.x * Mathf.Deg2Rad;
-                    // if (_lastGrabAngle > Mathf.PI)
-                    //     _lastGrabAngle -= Mathf.PI * 2;
+                    _lastGrabAngle = curAngle;
                 }
                 else
                 {
-                    var curAngle = Quaternion.LookRotation(localPos).eulerAngles.x * Mathf.Deg2Rad;
-                    Debug.Log(curAngle);
-                    if (curAngle > Mathf.PI * 1.5)
-                    {
-                        // if (Mathf.Abs(curAngle - _lastGrabAngle) > Mathf.PI)
-                        // {
-                        //     if (curAngle > 0.0f)
-                        //         curAngle -= Mathf.PI * 2;
-                        //     else
-                        //         curAngle += Mathf.PI * 2;
-                        // }
-                        var angleDiff = curAngle - _lastGrabAngle;
-                        _lastGrabAngle = curAngle;
-                        angle += angleDiff;
-                        Debug.Log("angle diff: " + angleDiff);
-                        Debug.Log("angle: " + angle);
-                    }
+                    Debug.Log("curAngle: " + curAngle);
+                    var angleDiff = curAngle - _lastGrabAngle;
+                    _lastGrabAngle = curAngle;
+                    angle += angleDiff;
                 }
                 _lastHand = hand;
                 if (angle > AngleUpperBound)
@@ -91,7 +79,7 @@ namespace Interaction
                 _isOn = false;
             }
 
-            if (useDebug)
+            if (debug)
             {
                 angle = debugAngle;
             }
