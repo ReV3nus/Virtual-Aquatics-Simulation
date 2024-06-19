@@ -16,9 +16,10 @@ namespace Physics
 
         public float power; // may control this with levers
         public float rudderPower;
-        public float waterDrag;
+        [Range(0, 1)] public float waterDrag;
         public Transform powerSource;
         [Range(0, 1)] public float rotationReduceFactor;
+
         private void Start()
         {
             _rigidbody = GetComponent<Rigidbody>();
@@ -49,17 +50,16 @@ namespace Physics
 
             var curPower = power * leverController.powerFactor;
             var curRudderPower = rudderPower * leverController.powerFactor;
-            
+
             var force = front * curPower;
             var spinForce = -direction * curRudderPower;
             var dragForce = -_rigidbody.velocity * waterDrag;
             var spinTorque = Vector3.Cross(r, spinForce);
-            
+
             _rigidbody.AddForceAtPosition(force, powerSource.position);
             // _rigidbody.AddForceAtPosition(spinForce, powerSource.position);
             _rigidbody.AddTorque(spinTorque);
             _rigidbody.AddForce(dragForce, ForceMode.Acceleration);
         }
-
     }
 }

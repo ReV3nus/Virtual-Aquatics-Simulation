@@ -9,9 +9,7 @@ namespace Physics
         public Rigidbody rigidbody;
         public float submergeDepth;
         public float floatFactor;
-        [Range(0, 1)]
         public float waterDrag;
-        [Range(0, 1)]
         public float waterAngularDrag;
 
         private void FixedUpdate()
