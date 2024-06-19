@@ -1,4 +1,4 @@
-Shader "ReV3nus/OceanShader"
+Shader "ReV3nus/DebugShader"
 {
     Properties
     {
@@ -7,12 +7,12 @@ Shader "ReV3nus/OceanShader"
         _Metallicness("Metallicness",Range(0,1)) = 0
         _Glossiness("Smoothness",Range(0,1)) = 1
 
-        // _HeightTexture ("Height Texture", 2D) = "white" {}
-        // _DxTex ("D(x) Texture", 2D) = "white" {}
-        // _DzTex ("D(z) Texture", 2D) = "white" {}
-         _DisplacementTexture ("Displacement Texture", 2D) = "black" {}
-         _FoldingTexture ("Folding Texture", 2D) = "black" {}
-        //_JacobianTexture ("Jacobian Texture", 2D) = "white" {}
+
+         _VelocityTexture ("V Texture", 2D) = "black" {}
+         _PressureTexture ("P Texture", 2D) = "black" {}
+         _newVelocityTexture ("nV Texture", 2D) = "black" {}
+         _newPressureTexture ("nP Texture", 2D) = "black" {}
+
         _FoamThreshold ("Foam Threshold", Range(0,1)) = 0.5
         _FoamSmoothRange ("Foam Smoothstep Range", Range(0,1)) = 0.5
         _FoamIntensity ("Foam Intensity", Range(0,1)) = 1.0
@@ -21,12 +21,8 @@ Shader "ReV3nus/OceanShader"
     }
     SubShader
     {
-        Tags { "Queue" = "Transparent" 
-        "IgnoreProjector" = "True" 
-        "RenderType"="Transparent"}
+        Tags { "RenderType"="Opaque" }
         LOD 100
-        ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {
@@ -53,15 +49,11 @@ Shader "ReV3nus/OceanShader"
                 float4 position : SV_POSITION;
             };
 
-            
-            // sampler2D _MainTex;
-            // float4 _MainTex_ST;
-            // sampler2D _NormalMap;
-            // float4 _NormalMap_ST;
-            sampler2D _DisplacementTexture;
-            float4 _DisplacementTexture_ST;
-            sampler2D _FoldingTexture;
-            float4 _FoldingTexture_ST;
+            sampler2D _VelocityTexture;
+            sampler2D _PressureTexture;
+            sampler2D _newVelocityTexture;
+            sampler2D _newPressureTexture;
+
             float4 _MainColor;
             float _Glossiness;
             float _Metallicness;
@@ -100,7 +92,7 @@ Shader "ReV3nus/OceanShader"
             FragmentData vert (VertexData v)
             {
                 FragmentData o;
-                o.uv = TRANSFORM_TEX(v.uv, _DisplacementTexture);
+                o.uv = v.uv;
 
                 o.position = UnityObjectToClipPos(v.position);
                 o.worldPos = mul(unity_ObjectToWorld, v.position).xyz;
@@ -203,14 +195,14 @@ Shader "ReV3nus/OceanShader"
                 
                 float4 color = float4(directLight * _LightColor0.rgb + indirectLight,1);
                 color += float4( UNITY_LIGHTMODEL_AMBIENT.xyz * albedo,1);
-                
-                float J = tex2D(_FoldingTexture, i.uv).y;
-                float FoamValue = (1 - smoothstep(_FoamThreshold - _FoamSmoothRange, _FoamThreshold, J)) * _FoamIntensity;
-                float3 FoamColor = float3(FoamValue,FoamValue,FoamValue);
-                return float4(color.xyz+FoamColor, mainTex.a);
+
+
+                //float4 tmpTex = tex2D( _VelocityTexture, i.uv );
+                //return tmpTex;
+
+                return float4(color.xyz, 1);
             }
             ENDCG
         }
     }
-    FallBack "Diffuse"
 }
