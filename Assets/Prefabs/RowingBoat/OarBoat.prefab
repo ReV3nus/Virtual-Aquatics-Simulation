@@ -44,6 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2425f4668dca4a8b8f0d4d89ef2be14c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  water: {fileID: 0}
   floatingPointCount: 4
   rigidbody: {fileID: 6301284286054562900}
   submergeDepth: 1
@@ -94,9 +95,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2425f4668dca4a8b8f0d4d89ef2be14c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  water: {fileID: 0}
   floatingPointCount: 4
   rigidbody: {fileID: 6301284286054562900}
-  submergeDepth: 0.5
+  submergeDepth: 0.6
   floatFactor: 1
   waterDrag: 0.9
   waterAngularDrag: 0.9
@@ -144,6 +146,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2425f4668dca4a8b8f0d4d89ef2be14c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  water: {fileID: 0}
   floatingPointCount: 4
   rigidbody: {fileID: 6301284286054562900}
   submergeDepth: 1
@@ -194,9 +197,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2425f4668dca4a8b8f0d4d89ef2be14c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  water: {fileID: 0}
   floatingPointCount: 4
   rigidbody: {fileID: 6301284286054562900}
-  submergeDepth: 0.5
+  submergeDepth: 0.6
   floatFactor: 1
   waterDrag: 0.9
   waterAngularDrag: 0.9
@@ -211,6 +215,7 @@ GameObject:
   - component: {fileID: 226321527239143940}
   - component: {fileID: 8057677952688001587}
   - component: {fileID: 6301284286054562900}
+  - component: {fileID: 7720849811257751769}
   m_Layer: 0
   m_Name: OarBoat
   m_TagString: Untagged
@@ -276,7 +281,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_ImplicitCom: 0
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -284,6 +289,27 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!65 &7720849811257751769
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8799577811541180000}
+  m_Material: {fileID: 13400000, guid: 7ea5cceaff1f15441a98be762f0492e1, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 80
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.778801, y: 1, z: 7.541852}
+  m_Center: {x: 0, y: 0, z: 0.33736992}
 --- !u!1001 &1410841709767234464
 PrefabInstance:
   m_ObjectHideFlags: 0

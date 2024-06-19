@@ -303,57 +303,21 @@ PrefabInstance:
       value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 2374347934770756753, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterDrag
-      value: 0.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 2374347934770756753, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: floatFactor
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2374347934770756753, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: submergeDepth
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 2374347934770756753, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterAngularDrag
-      value: 0.9
-      objectReference: {fileID: 0}
+      propertyPath: water
+      value: 
+      objectReference: {fileID: 1325993584}
     - target: {fileID: 3027666077242280005, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterDrag
-      value: 0.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 3027666077242280005, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: floatFactor
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3027666077242280005, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: submergeDepth
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3027666077242280005, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterAngularDrag
-      value: 0.9
-      objectReference: {fileID: 0}
+      propertyPath: water
+      value: 
+      objectReference: {fileID: 1325993584}
     - target: {fileID: 3299584338980325613, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       propertyPath: m_Layer
       value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4601106264392998404, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterDrag
-      value: 0.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 4601106264392998404, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: floatFactor
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4601106264392998404, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: submergeDepth
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 4601106264392998404, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterAngularDrag
-      value: 0.9
-      objectReference: {fileID: 0}
+      propertyPath: water
+      value: 
+      objectReference: {fileID: 1325993584}
     - target: {fileID: 4739517668784538230, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       propertyPath: m_Layer
       value: 6
@@ -382,10 +346,6 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6301284286054562900, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: m_ExcludeLayers.m_Bits
-      value: 64
-      objectReference: {fileID: 0}
     - target: {fileID: 6467692956936768772, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -393,10 +353,6 @@ PrefabInstance:
     - target: {fileID: 6621722316630870246, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       propertyPath: m_IsActive
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8057677952688001587, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: speedFactor
-      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 8343961839008727075, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       propertyPath: m_Layer
@@ -411,63 +367,22 @@ PrefabInstance:
       value: OarBoat
       objectReference: {fileID: 0}
     - target: {fileID: 9174159974201764936, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterDrag
-      value: 0.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 9174159974201764936, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: floatFactor
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 9174159974201764936, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: submergeDepth
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 9174159974201764936, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      propertyPath: waterAngularDrag
-      value: 0.9
-      objectReference: {fileID: 0}
+      propertyPath: water
+      value: 
+      objectReference: {fileID: 1325993584}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 226321527239143940, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 120951196}
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8799577811541180000, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1095076864}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
 --- !u!4 &925522361 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 226321527239143940, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
   m_PrefabInstance: {fileID: 925522360}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1095076861 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8799577811541180000, guid: b4254fc693358df41b6e1c1d07b25c8a, type: 3}
-  m_PrefabInstance: {fileID: 925522360}
-  m_PrefabAsset: {fileID: 0}
---- !u!65 &1095076864
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1095076861}
-  m_Material: {fileID: 13400000, guid: 7ea5cceaff1f15441a98be762f0492e1, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 2.778801, y: 1, z: 7.541852}
-  m_Center: {x: 0, y: 0, z: 0.33736992}
 --- !u!1 &1325993580
 GameObject:
   m_ObjectHideFlags: 0
