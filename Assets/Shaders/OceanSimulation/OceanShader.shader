@@ -10,7 +10,7 @@ Shader "ReV3nus/OceanShader"
         // _HeightTexture ("Height Texture", 2D) = "white" {}
         // _DxTex ("D(x) Texture", 2D) = "white" {}
         // _DzTex ("D(z) Texture", 2D) = "white" {}
-         _DisplacementTexture ("Displacement Texture", 2D) = "black" {}
+         _DisplacementTexture ("Displacement Texture", 2D) = "white" {}
          _FoldingTexture ("Folding Texture", 2D) = "black" {}
         //_JacobianTexture ("Jacobian Texture", 2D) = "white" {}
         _FoamThreshold ("Foam Threshold", Range(0,1)) = 0.5
@@ -117,6 +117,7 @@ Shader "ReV3nus/OceanShader"
 
                 //// Set UnityGIInput
                 UnityGIInput d;
+                UNITY_INITIALIZE_OUTPUT(UnityGIInput, d);
                 d.light = light;
                 d.worldPos = worldPos;
                 d.worldViewDir = viewDirection;

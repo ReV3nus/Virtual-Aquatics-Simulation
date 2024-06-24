@@ -2,26 +2,26 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
-using UnityEditor;
+// using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
-using static UnityEditor.PlayerSettings;
+// using static UnityEditor.PlayerSettings;
 
-[CustomEditor(typeof(OceanController))]
-public class OceanControllerEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        OceanController generator = (OceanController)target;
-        if (GUILayout.Button("Debug"))
-        {
-            generator.debugTst();
-        }
-    }
-}
+// [CustomEditor(typeof(OceanController))]
+// public class OceanControllerEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         OceanController generator = (OceanController)target;
+//         if (GUILayout.Button("Debug"))
+//         {
+//             generator.debugTst();
+//         }
+//     }
+// }
 [System.Serializable]
 public struct FFTData
 {
@@ -262,6 +262,12 @@ public class OceanController : MonoBehaviour
         oceanSimulate.SetBuffer(kernelDFT, "positions", ocean.positionBuffer);
         oceanSimulate.SetBuffer(kernelDFT, "_FFTBuffer", FFTDatasBuffer);
         //oceanSimulate.SetBuffer(kernelDFT, "_FFTCalcBuffer", FFTCalcComputeBuffer);
+
+
+
+        ocean.planeShader.SetTexture(ocean.kernelUpdate, "_DisplacementTexture_FFT", DisplacementTexture);
+        ocean.planeShader.SetTexture(ocean.kernelUpdate, "_FoldingTexture_FFT", FoldingTexture);
+
     }
     void InitAndCalcPhillipsSpectrum()
     {
@@ -341,8 +347,8 @@ public class OceanController : MonoBehaviour
         //oceanMaterial.SetTexture("_HeightTexture", HeightTexture);
         //oceanMaterial.SetTexture("_DxTex", DxTex);
         //oceanMaterial.SetTexture("_DzTex", DzTex);
-        ocean.oceanMaterial.SetTexture("_DisplacementTexture", DisplacementTexture);
-        ocean.oceanMaterial.SetTexture("_FoldingTexture", FoldingTexture);
+        //ocean.oceanMaterial.SetTexture("_DisplacementTexture", DisplacementTexture);
+        //ocean.oceanMaterial.SetTexture("_FoldingTexture", FoldingTexture);
         //oceanMaterial.SetTexture("_JacobianTexture", JacobianTexture);
     }
 
@@ -355,7 +361,7 @@ public class OceanController : MonoBehaviour
     *********************************************************/
     void Start()
     {
-        ocean.CreatePlaneMesh();
+        //ocean.CreatePlaneMesh();
         InitFromOceanPlane();
 
         InitGlobalComputeShader();
@@ -370,7 +376,7 @@ public class OceanController : MonoBehaviour
         CalcPhillipsSpectrumWithTime();
         CalcHeightWithFFT();
 
-        ocean.UpdatePlaneMesh();
+        //ocean.UpdatePlaneMesh();
     }
     private void OnDestroy()
     {
@@ -389,8 +395,8 @@ public class OceanController : MonoBehaviour
         //positions = null;
         //Array.Clear(normals, 0, normals.Length);
         //normals = null;
-        Array.Clear(CoefficientW, 0, CoefficientW.Length);
-        CoefficientW = null;
+        //Array.Clear(CoefficientW, 0, CoefficientW.Length);
+        //CoefficientW = null;
         //Array.Clear(SpectrumH1, 0, SpectrumH1.Length);
         //SpectrumH1 = null;
         //Array.Clear(SpectrumH2, 0, SpectrumH2.Length);

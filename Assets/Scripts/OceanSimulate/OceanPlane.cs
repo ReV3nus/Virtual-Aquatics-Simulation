@@ -2,25 +2,31 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using UnityEditor;
+// using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(OceanPlane))]
-public class OceanPlaneEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        OceanPlane generator = (OceanPlane)target;
-        if (GUILayout.Button("Generate Plane"))
-        {
-            generator.CreatePlaneMesh();
-        }
-    }
-}
+// [CustomEditor(typeof(OceanPlane))]
+// public class OceanPlaneEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         OceanPlane generator = (OceanPlane)target;
+//         if (GUILayout.Button("Generate Plane"))
+//         {
+//             generator.CreatePlaneMesh();
+//             generator.InitPlaneShader();
+//         }
+//     }
+// }
 public class OceanPlane : MonoBehaviour
 {
+    public ComputeShader planeShader;
+    public bool haveOceanController = false, haveWaterInteractor = false;
+    [HideInInspector]
+    public int kernelUpdate, kernelInit;
+
     private const int THREAD_X = 8;
     private const int THREAD_Y = 8;
     [HideInInspector]
@@ -50,11 +56,57 @@ public class OceanPlane : MonoBehaviour
     [HideInInspector]
     public ComputeBuffer positionBuffer, origPositionBuffer, normalBuffer;
 
+    private RenderTexture DisplacementTexture;
+    private RenderTexture FoldingTexture;
+
+    public void InitPlaneShader()
+    {
+        kernelUpdate = planeShader.FindKernel("UpdatePlane");
+        kernelInit = planeShader.FindKernel("InitPlane");
+
+        planeShader.SetInt("_PatchVertexCount", PatchVertexCount);
+        planeShader.SetBool("FFTflag", haveOceanController);
+        planeShader.SetBool("NSflag", haveWaterInteractor);
+
+        DisplacementTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        FoldingTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        DisplacementTexture.enableRandomWrite = true;
+        FoldingTexture.enableRandomWrite = true;
+        DisplacementTexture.Create();
+        FoldingTexture.Create();
+
+        planeShader.SetBuffer(kernelUpdate, "positions", positionBuffer);
+        planeShader.SetBuffer(kernelUpdate, "origPositions", origPositionBuffer);
+        planeShader.SetTexture(kernelUpdate, "_DisplacementTexture", DisplacementTexture);
+        planeShader.SetTexture(kernelUpdate, "_FoldingTexture", FoldingTexture);
+        planeShader.SetTexture(kernelUpdate, "_DisplacementTexture_FFT", DisplacementTexture);
+        planeShader.SetTexture(kernelUpdate, "_FoldingTexture_FFT", FoldingTexture);
+        planeShader.SetTexture(kernelUpdate, "_DisplacementTexture_NS", DisplacementTexture);
+        planeShader.SetTexture(kernelUpdate, "_FoldingTexture_NS", FoldingTexture);
+
+        planeShader.SetTexture(kernelInit, "_DisplacementTexture", DisplacementTexture);
+        planeShader.SetTexture(kernelInit, "_FoldingTexture", FoldingTexture);
+
+        planeShader.Dispatch(kernelInit, _groupX, _groupY, 1);
+        oceanMaterial.SetTexture("_DisplacementTexture", DisplacementTexture);
+        oceanMaterial.SetTexture("_FoldingTexture", FoldingTexture);
+    }
+
+    private void Awake()
+    {
+        CreatePlaneMesh();
+        InitPlaneShader();
+    }
+    private void LateUpdate()
+    {
+        planeShader.Dispatch(kernelUpdate, _groupX, _groupY, 1);
+        UpdatePlaneMesh();
+    }
 
 
     float TMPFUNC(float x, float z)
     {
-        //return 0f;
+        return 0f;
         x = x / PatchVertexCount - 0.5f;
         z = z / PatchVertexCount - 0.5f;
         if (Mathf.Abs(x) > 0.1f || MathF.Abs(z) > 0.1f)
@@ -64,8 +116,8 @@ public class OceanPlane : MonoBehaviour
         z = z * Mathf.PI / 0.2f;
         //return Mathf.Cos(x);
         //return 0f;
-        return 0f;
-        //return 1f * (Mathf.Cos(x) + Mathf.Cos(z));
+        //return 0f;
+        return 5f * (Mathf.Cos(x) + Mathf.Cos(z));
         //Vector2 dist = new Vector2(x - PatchVertexCount / 2f, z - PatchVertexCount / 2f);
         //float tmp = Mathf.Sqrt(dist.x * dist.x + dist.y * dist.y);
         //return 2f-tmp * 1f;
@@ -152,5 +204,7 @@ public class OceanPlane : MonoBehaviour
         positionBuffer.GetData(positions);
         oceanMesh.vertices = positions;
         oceanMesh.RecalculateNormals();
+        //oceanMaterial.SetTexture("_DisplacementTexture", DisplacementTexture);
+        //oceanMaterial.SetTexture("_FoldingTexture", FoldingTexture);
     }
 }

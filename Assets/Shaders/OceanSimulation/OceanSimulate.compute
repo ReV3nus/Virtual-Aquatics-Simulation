@@ -374,9 +374,9 @@ void updateHeight(uint3 id : SV_DispatchThreadID)
     float ChoppyDz = _FFTBuffer[index]._FFTDZ.x * Scale_Factor * _ChoppyWavesLambda;
     float J = _FFTBuffer[index]._Jacobian.x * Scale_Factor * _ChoppyWavesLambda + 1;
     
-    positions[index].x = origPositions[index].x + ChoppyDx;
-    positions[index].z = origPositions[index].z + ChoppyDz;
-    positions[index].y = h;
+    //positions[index].x = origPositions[index].x + ChoppyDx;
+    //positions[index].z = origPositions[index].z + ChoppyDz;
+    //positions[index].y = h;
     
     normals[index] = normalize(float3(-Gradientdx, 1.0, -Gradientdz));
     

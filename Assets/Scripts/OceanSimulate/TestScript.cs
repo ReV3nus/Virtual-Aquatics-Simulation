@@ -1,22 +1,22 @@
 
-using UnityEditor;
+// using UnityEditor;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
+// using static UnityEditor.PlayerSettings;
 
-[CustomEditor(typeof(TestScript))]
-public class TestScriptEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        TestScript generator = (TestScript)target;
-        if (GUILayout.Button("Test"))
-        {
-            generator.Test();
-        }
-    }
-}
+// [CustomEditor(typeof(TestScript))]
+// public class TestScriptEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         TestScript generator = (TestScript)target;
+//         if (GUILayout.Button("Test"))
+//         {
+//             generator.Test();
+//         }
+//     }
+// }
 public class TestScript : MonoBehaviour
 {
     float RandomFloat(uint seed)
@@ -110,16 +110,16 @@ public class TestScript : MonoBehaviour
     //void fast_fast_tle(complex* A, int type)
     //{
     //    for (int i = 0; i < limit; i++)
-    //        if (i < r[i]) swap(A[i], A[r[i]]);//Çó³öÒªµü´úµÄÐòÁÐ 
-    //    for (int mid = 1; mid < limit; mid <<= 1)//´ýºÏ²¢Çø¼äµÄÖÐµã
+    //        if (i < r[i]) swap(A[i], A[r[i]]);//ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
+    //    for (int mid = 1; mid < limit; mid <<= 1)//ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½
     //    {
-    //        complex Wn(cos(Pi/ mid) , type* sin(Pi/ mid) ); //µ¥Î»¸ù 
-    //    for (int R = mid << 1, j = 0; j < limit; j += R)//RÊÇÇø¼äµÄÓÒ¶Ëµã£¬j±íÊ¾Ç°ÒÑ¾­µ½ÄÄ¸öÎ»ÖÃÁË 
+    //        complex Wn(cos(Pi/ mid) , type* sin(Pi/ mid) ); //ï¿½ï¿½Î»ï¿½ï¿½ 
+    //    for (int R = mid << 1, j = 0; j < limit; j += R)//Rï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶Ëµã£¬jï¿½ï¿½Ê¾Ç°ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Î»ï¿½ï¿½ï¿½ï¿½ 
     //    {
-    //        complex w(1,0);//ÃÝ 
-    //    for (int k = 0; k < mid; k++, w = w * Wn)//Ã¶¾Ù×ó°ë²¿·Ö 
+    //        complex w(1,0);//ï¿½ï¿½ 
+    //    for (int k = 0; k < mid; k++, w = w * Wn)//Ã¶ï¿½ï¿½ï¿½ï¿½ë²¿ï¿½ï¿½ 
     //    {
-    //        complex x = A[j + k], y = w * A[j + mid + k];//ºûµûÐ§Ó¦ 
+    //        complex x = A[j + k], y = w * A[j + mid + k];//ï¿½ï¿½ï¿½ï¿½Ð§Ó¦ 
     //        A[j + k] = x + y;
     //        A[j + mid + k] = x - y;
     //    }

@@ -34,7 +34,7 @@ RWBuffer<int> _DispRes;
 // GlobalParams
 int _PatchVertexCount;
 float _PatchSize;
-
+float dl;
 
 // Calc Result
 RWStructuredBuffer<float3> positions;
@@ -43,6 +43,10 @@ RWTexture2D<float> _GridVxTexture, _GridVzTexture;
 RWTexture2D<float> _newGridVxTexture, _newGridVzTexture;
 //RWTexture2D<float4> _VelocityTexture, _NewVelocityTexture;
 RWTexture2D<float> _PressureTexture, _NewPressureTexture;
+
+RWTexture2D<float4> _DisplacementTexture;
+RWTexture2D<float4> _FoldingTexture;
+float _ChoppyLambda;
 
 int getIndex(int2 id)
 {
@@ -213,7 +217,7 @@ void CalcAdvectionInGridX(uint3 id)
         curV.y = (_GridVzTexture[id.xy] + _GridVzTexture[id.xy + int2(0, 1)]) / 2.0;
     else
         curV.y = (_GridVzTexture[id.xy + int2(-1, 0)] + _GridVzTexture[id.xy + int2(-1, 1)]) / 2.0;
-    float2 prePos = float2(x * 1.0 - curV.x * _deltaTime, y * 1.0 - curV.y * _deltaTime);
+    float2 prePos = float2(x * 1.0 - curV.x * _deltaTime / dl, y * 1.0 - curV.y * _deltaTime / dl);
     
     float2 conRes = GetPosVwithConstraints(prePos, 1, 0);
     if(conRes.y)
@@ -249,7 +253,7 @@ void CalcAdvectionInGridZ(uint3 id)
         curV.x = (_GridVxTexture[id.xy] + _GridVxTexture[id.xy + int2(1, 0)]) / 2.0;
     else
         curV.x = (_GridVxTexture[id.xy + int2(0, -1)].x + _GridVxTexture[id.xy + int2(1, -1)]) / 2.0;
-    float2 prePos = float2(x * 1.0 - curV.x * _deltaTime, y * 1.0 - curV.y * _deltaTime);
+    float2 prePos = float2(x * 1.0 - curV.x * _deltaTime / dl, y * 1.0 - curV.y * _deltaTime / dl);
     
     float2 conRes = GetPosVwithConstraints(prePos, 0, 1);
     if (conRes.y)
@@ -348,8 +352,8 @@ float CalcDivergence(uint3 id)
 {
     float Dx, Dz;
     int x = id.x, y = id.y;
-    Dx = (_newGridVxTexture[id.xy + int2(1, 0)] - _newGridVxTexture[id.xy]) / 1.0;
-    Dz = (_newGridVzTexture[id.xy + int2(0, 1)] - _newGridVzTexture[id.xy]) / 1.0;
+    Dx = (_newGridVxTexture[id.xy + int2(1, 0)] - _newGridVxTexture[id.xy]) / (1.0 * dl);
+    Dz = (_newGridVzTexture[id.xy + int2(0, 1)] - _newGridVzTexture[id.xy]) / (1.0 * dl);
     
     //float Dy = _newGridVyTexture[id.xy];
     return Dx + Dz;
@@ -374,7 +378,7 @@ float CalcDivergence(uint3 id)
 void UpdatePoissonPressure(uint3 id : SV_DispatchThreadID)
 {
     float divergence = CalcDivergence(id);
-    _NewPressureTexture[id.xy] = -divergence;
+    _NewPressureTexture[id.xy] = -divergence * dl * dl;
     
     int x = id.x, y = id.y;
     if (x > 0 && x < _PatchVertexCount - 1)
@@ -405,8 +409,13 @@ void CalcProjection(uint3 id : SV_DispatchThreadID)
         _GridVxTexture[id.xy] = 0.0;
     else
     {
-        _GridVxTexture[id.xy] = _newGridVxTexture[id.xy] - _deltaTime * (_NewPressureTexture[(id.xy + int2(0, 0))] - _NewPressureTexture[(id.xy + int2(-1, 0))]) / 1.0;
-            
+        _GridVxTexture[id.xy] = _newGridVxTexture[id.xy] - _deltaTime * (_NewPressureTexture[(id.xy + int2(0, 0))] - _NewPressureTexture[(id.xy + int2(-1, 0))]) / (1.0 * dl);
+        
+        //if (_ConstraintTexture[id.xy] < 0 && _ConstraintTexture[id.xy - int2(1, 0)] > 0)
+        //{
+        //    float RATIO = 1000000;
+        //    float disp = 1.0 / RATIO * _DispRes[0] / _DispRes[1];
+        //}
     }
     if (x == _PatchVertexCount - 1)
         _GridVxTexture[id.xy + int2(1, 0)] = 0.0;
@@ -415,7 +424,7 @@ void CalcProjection(uint3 id : SV_DispatchThreadID)
         _GridVzTexture[id.xy] = 0.0;
     else
     {
-        _GridVzTexture[id.xy] = _newGridVzTexture[id.xy] - _deltaTime * (_NewPressureTexture[(id.xy + int2(0, 0))] - _NewPressureTexture[(id.xy + int2(0, -1))]) / 1.0;
+        _GridVzTexture[id.xy] = _newGridVzTexture[id.xy] - _deltaTime * (_NewPressureTexture[(id.xy + int2(0, 0))] - _NewPressureTexture[(id.xy + int2(0, -1))]) / (1.0 * dl);
         
     }
     if (y == _PatchVertexCount - 1)
@@ -448,7 +457,31 @@ void UpdateStatus(uint3 id : SV_DispatchThreadID)
     _PressureTexture[id.xy] = _NewPressureTexture[id.xy];
     //_VelocityTexture[id.xy] = _NewVelocityTexture[id.xy];
     
-    positions[getIndex(id.xy)].y = _NewPressureTexture[id.xy] / _G;
+    float2 vel;
+    vel.x = (_GridVxTexture[id.xy + int2(1, 0)] + _GridVxTexture[id.xy]) / 2.0;
+    vel.y = (_GridVzTexture[id.xy + int2(0, 1)] + _GridVzTexture[id.xy]) / 2.0;
+    
+    float ChoppyDx = vel.x * _ChoppyLambda;
+    float ChoppyDz = vel.y * _ChoppyLambda;
+    
+    _DisplacementTexture[id.xy] = float4(ChoppyDx, _NewPressureTexture[id.xy] / _G, ChoppyDz, 1);
+    
+    float Jxx = 1 + (_GridVxTexture[id.xy + int2(1, 0)] - _GridVxTexture[id.xy]) / (1.0 * dl) * _ChoppyLambda;
+    float Jzz = 1 + (_GridVzTexture[id.xy + int2(0, 1)] - _GridVzTexture[id.xy]) / (1.0 * dl) * _ChoppyLambda;
+    float Jxz = _ChoppyLambda * (_GridVxTexture[id.xy + int2(1, 1)] + _GridVxTexture[id.xy + int2(0, 1)]
+                                    - _GridVxTexture[id.xy + int2(1, 0)] - _GridVxTexture[id.xy + int2(0, 0)]) / (2.0 * dl);
+    float Jzx = _ChoppyLambda * (_GridVzTexture[id.xy + int2(1, 1)] + _GridVzTexture[id.xy + int2(1, 0)]
+                                    - _GridVzTexture[id.xy + int2(0, 1)] - _GridVzTexture[id.xy + int2(0, 0)]) / (2.0 * dl);
+    float J = Jxx * Jzz - Jxz * Jzx;
+    J = J - 1;
+    //J = min(J, 0.0);
+    
+    float Gx = (_NewPressureTexture[id.xy + int2(1, 0)] - _NewPressureTexture[id.xy + int2(-1, 0)]) / (2.0 * dl);
+    float Gz = (_NewPressureTexture[id.xy + int2(0, 1)] - _NewPressureTexture[id.xy + int2(0, -1)]) / (2.0 * dl);
+    _FoldingTexture[id.xy] = float4(Gx, J, Gz, 1);
+    
+    
+    //positions[getIndex(id.xy)].y = _NewPressureTexture[id.xy] / _G;
     
 
 }

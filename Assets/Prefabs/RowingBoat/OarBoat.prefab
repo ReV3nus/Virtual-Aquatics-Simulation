@@ -153,6 +153,73 @@ MonoBehaviour:
   floatFactor: 1
   waterDrag: 0.9
   waterAngularDrag: 0.9
+--- !u!1 &8361717409611788511
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3094859849675294544}
+  - component: {fileID: 8315372756440284940}
+  - component: {fileID: 2981537756390782961}
+  m_Layer: 8
+  m_Name: OceanCollide
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3094859849675294544
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8361717409611788511}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 226321527239143940}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8315372756440284940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8361717409611788511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1323ac704475b74a92fb07689d57808, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ocean: {fileID: 0}
+--- !u!65 &2981537756390782961
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8361717409611788511}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.317631, y: 0.6870416, z: 6.085739}
+  m_Center: {x: -0.000538677, y: 0.0030175596, z: -0.08243561}
 --- !u!1 &8367564204228062041
 GameObject:
   m_ObjectHideFlags: 0
@@ -244,6 +311,7 @@ Transform:
   - {fileID: 9166187458496540460}
   - {fileID: 7174654819917360539}
   - {fileID: 4012300231589441128}
+  - {fileID: 3094859849675294544}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8057677952688001587
@@ -258,6 +326,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c58ba6b927754808a55ff119d926626b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  water: {fileID: 0}
   leftOar: {fileID: 5386485906552641135}
   rightOar: {fileID: 1495594234733747873}
   waterDrag: 0.2

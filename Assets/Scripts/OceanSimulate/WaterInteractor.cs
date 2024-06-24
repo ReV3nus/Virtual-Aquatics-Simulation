@@ -1,31 +1,31 @@
 
 using System.IO;
 using System.Linq;
-using UnityEditor;
+// using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
 using static OceanCollide;
-using static UnityEditor.PlayerSettings;
+// using static UnityEditor.PlayerSettings;
 
-[CustomEditor(typeof(WaterInteractor))]
-public class WaterInteractorEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        WaterInteractor generator = (WaterInteractor)target;
-        if (GUILayout.Button("Init"))
-        {
-            generator.initTst();
-        }
-        if (GUILayout.Button("Debug"))
-        {
-            generator.debugTst();
-        }
-    }
-}
+// [CustomEditor(typeof(WaterInteractor))]
+// public class WaterInteractorEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         WaterInteractor generator = (WaterInteractor)target;
+//         if (GUILayout.Button("Init"))
+//         {
+//             generator.initTst();
+//         }
+//         if (GUILayout.Button("Debug"))
+//         {
+//             generator.debugTst();
+//         }
+//     }
+// }
 public class WaterInteractor : MonoBehaviour
 {
     public OceanPlane ocean;
@@ -40,12 +40,16 @@ public class WaterInteractor : MonoBehaviour
     [Header("Navier-Stokes Attributes")]
     public ComputeShader Solver;
     public float _deltaTime;
+    public float ChoppyLambda;
     private float _Timer;
     private RenderTexture GridVxTexture, GridVzTexture;
     private RenderTexture newGridVxTexture, newGridVzTexture;
     //private RenderTexture VelocityTexture, newVelocityTexture;
     private RenderTexture PressureTexture, newPressureTexture;
     private int kernelUpdate, kernelInit, kernelAdvect, kernelPress, kernelProj, kernelCheckCon, kernelCalcDisp, kernelApplyDisp;
+
+    private RenderTexture DisplacementTexture;
+    private RenderTexture FoldingTexture;
 
 
     [Header("Ocean Plane Attributes")]
@@ -105,6 +109,8 @@ public class WaterInteractor : MonoBehaviour
         Solver.SetInt("_PatchVertexCount", PatchVertexCount);
         Solver.SetInt("_TotalBoxColliders", obj != null ? 1 : 0);
         Solver.SetFloat("_PatchSize", PatchSize);
+        Solver.SetFloat("dl", VertexDistance);
+        Solver.SetFloat("_ChoppyLambda", ChoppyLambda);
 
         GridVxTexture = new RenderTexture(PatchVertexCount + 1, PatchVertexCount, 0, RenderTextureFormat.RHalf);
         //GridVyTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.RHalf);
@@ -117,6 +123,8 @@ public class WaterInteractor : MonoBehaviour
         //newVelocityTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
         newPressureTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.RHalf);
         ConstraintTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.RHalf);
+        DisplacementTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
+        FoldingTexture = new RenderTexture(PatchVertexCount, PatchVertexCount, 0, RenderTextureFormat.ARGBHalf);
 
         GridVxTexture.enableRandomWrite = true;
         //GridVyTexture.enableRandomWrite = true;
@@ -129,6 +137,8 @@ public class WaterInteractor : MonoBehaviour
         //newVelocityTexture.enableRandomWrite = true;
         newPressureTexture.enableRandomWrite = true;
         ConstraintTexture.enableRandomWrite = true;
+        DisplacementTexture.enableRandomWrite = true;
+        FoldingTexture.enableRandomWrite = true;
 
         GridVxTexture.Create();
         //GridVyTexture.Create();
@@ -141,6 +151,8 @@ public class WaterInteractor : MonoBehaviour
         //newVelocityTexture.Create();
         newPressureTexture.Create();
         ConstraintTexture.Create();
+        DisplacementTexture.Create();
+        FoldingTexture.Create();
 
         //Solver.SetTexture(kernelInit, "_VelocityTexture", VelocityTexture);
         Solver.SetTexture(kernelInit, "_GridVxTexture", GridVxTexture);
@@ -182,6 +194,10 @@ public class WaterInteractor : MonoBehaviour
         //Solver.SetTexture(kernelUpdate, "_NewVelocityTexture", newVelocityTexture);
         Solver.SetTexture(kernelUpdate, "_NewPressureTexture", newPressureTexture);
         Solver.SetBuffer(kernelUpdate, "positions", ocean.positionBuffer);
+        Solver.SetTexture(kernelUpdate, "_DisplacementTexture", DisplacementTexture);
+        Solver.SetTexture(kernelUpdate, "_FoldingTexture", FoldingTexture);
+        Solver.SetTexture(kernelUpdate, "_GridVxTexture", GridVxTexture);
+        Solver.SetTexture(kernelUpdate, "_GridVzTexture", GridVzTexture);
 
         Solver.SetTexture(kernelCheckCon, "_PressureTexture", PressureTexture);
         Solver.SetTexture(kernelCheckCon, "_ConstraintTexture", ConstraintTexture);
@@ -198,6 +214,9 @@ public class WaterInteractor : MonoBehaviour
         Solver.SetBuffer(kernelApplyDisp, "_DispRes", dispResBuffer);
 
 
+
+        ocean.planeShader.SetTexture(ocean.kernelUpdate, "_DisplacementTexture_NS", DisplacementTexture);
+        ocean.planeShader.SetTexture(ocean.kernelUpdate, "_FoldingTexture_NS", FoldingTexture);
 
 
         Solver.Dispatch(kernelInit, _groupX, _groupY, 1);
@@ -228,7 +247,7 @@ public class WaterInteractor : MonoBehaviour
     {
         updateConstraints();
 
-        Debug.Log("Dispatched "+ dT);
+        //Debug.Log("Dispatched "+ dT);
         Solver.SetFloat("_deltaTime", dT);
         Solver.Dispatch(kernelAdvect, _groupX, _groupY, 1);
         Solver.Dispatch(kernelPress, _groupX, _groupY, 1);
@@ -250,7 +269,7 @@ public class WaterInteractor : MonoBehaviour
     *********************************************************/
     void Start()
     {
-        ocean.CreatePlaneMesh();
+        //ocean.CreatePlaneMesh();
         InitFromOceanPlane();
         InitGlobalComputeShader();
         _Timer = 0.0f;
@@ -267,7 +286,7 @@ public class WaterInteractor : MonoBehaviour
             _Timer = 0;
         }
 
-        ocean.UpdatePlaneMesh();
+        //ocean.UpdatePlaneMesh();
     }
     public void initTst()
     {

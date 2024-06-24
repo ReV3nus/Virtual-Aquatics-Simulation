@@ -1,20 +1,20 @@
 using UnityEngine;
-using UnityEditor;
+// using UnityEditor;
 
-[CustomEditor(typeof(OceanMeshGenerator))]
-public class OceanMeshGeneratorEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        OceanMeshGenerator generator = (OceanMeshGenerator)target;
-        if (GUILayout.Button("Generate Plane"))
-        {
-            generator.GeneratePlane();
-        }
-    }
-}
+// [CustomEditor(typeof(OceanMeshGenerator))]
+// public class OceanMeshGeneratorEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         OceanMeshGenerator generator = (OceanMeshGenerator)target;
+//         if (GUILayout.Button("Generate Plane"))
+//         {
+//             generator.GeneratePlane();
+//         }
+//     }
+// }
 
 public class OceanMeshGenerator : MonoBehaviour
 {

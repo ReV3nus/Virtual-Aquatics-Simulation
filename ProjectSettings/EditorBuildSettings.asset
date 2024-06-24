@@ -5,9 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/BoatDisplay.unity
     guid: 3f268638bc015b340a439772bf184fab
+  - enabled: 1
+    path: Assets/Scenes/Environment/RAM 2019 Demo Stylized.unity
+    guid: 8be2ae69b9bc4f9488b1d5045538553e
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 97cbd2812c35d9f4eb7c2eb1df1d4d37, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: a40f14791e3b6da4b98c129d3e154d59, type: 2}

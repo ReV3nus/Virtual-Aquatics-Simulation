@@ -1,22 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor;
+// using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(PhillipTest))]
-public class PhillipTestEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-
-        PhillipTest generator = (PhillipTest)target;
-        if (GUILayout.Button("Test"))
-        {
-            generator.start();
-        }
-    }
-}
+// [CustomEditor(typeof(PhillipTest))]
+// public class PhillipTestEditor : Editor
+// {
+//     public override void OnInspectorGUI()
+//     {
+//         DrawDefaultInspector();
+//
+//         PhillipTest generator = (PhillipTest)target;
+//         if (GUILayout.Button("Test"))
+//         {
+//             generator.start();
+//         }
+//     }
+// }
 public class PhillipTest : MonoBehaviour
 {
     public ComputeShader oceanSimulate;

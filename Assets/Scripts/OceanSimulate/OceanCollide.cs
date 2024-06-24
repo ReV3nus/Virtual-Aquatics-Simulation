@@ -11,7 +11,6 @@ public class OceanCollide : MonoBehaviour
     private Vector2 meshStart;
     private int meshCount;
     private float meshDistance;
-    private Rigidbody rb;
 
     private Vector3 size, halfSize, center;
     private Vector3[] corners;
@@ -27,8 +26,7 @@ public class OceanCollide : MonoBehaviour
     public void Init()
     {
         box = GetComponent<BoxCollider>();
-        rb = GetComponent<Rigidbody>();
-        meshStart = new Vector2(ocean.gameObject.transform.position.x, ocean.gameObject.transform.position.y);
+        meshStart = new Vector2(ocean.gameObject.transform.position.x, ocean.gameObject.transform.position.z);
         meshCount = ocean.PatchVertexCount;
         meshDistance = ocean.VertexDistance;
         size = box.bounds.size;
@@ -39,6 +37,11 @@ public class OceanCollide : MonoBehaviour
     private void Start()
     {
         Init();
+    }
+
+    private void Update()
+    {
+        
     }
 
     public void UpdateInfo()
@@ -60,15 +63,15 @@ public class OceanCollide : MonoBehaviour
         }
 
         info.p0.x = (corners[0].x - meshStart.x) / meshDistance; 
-        info.p0.y = (corners[0].z - meshStart.x) / meshDistance;
+        info.p0.y = (corners[0].z - meshStart.y) / meshDistance;
         info.p1.x = (corners[1].x - meshStart.x) / meshDistance; 
-        info.p1.y = (corners[1].z - meshStart.x) / meshDistance;
+        info.p1.y = (corners[1].z - meshStart.y) / meshDistance;
         info.p2.x = (corners[2].x - meshStart.x) / meshDistance; 
-        info.p2.y = (corners[2].z - meshStart.x) / meshDistance;
+        info.p2.y = (corners[2].z - meshStart.y) / meshDistance;
         info.p3.x = (corners[3].x - meshStart.x) / meshDistance; 
-        info.p3.y = (corners[3].z - meshStart.x) / meshDistance;
+        info.p3.y = (corners[3].z - meshStart.y) / meshDistance;
         info.h = corners[1].y;
 
-        info.v = new Vector2(rb.velocity.x, rb.velocity.z);
+        info.v = new Vector2(0,0);
     }
 }
